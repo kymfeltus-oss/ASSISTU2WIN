@@ -49,6 +49,28 @@ export default async function LeadsPage() {
     console.error("[LEADS_QUERY_EXCEPTION]", { error });
   }
 
+  // #region agent log
+  fetch("http://127.0.0.1:7762/ingest/517856b2-5e4c-4c3a-ab8c-534d41e56940", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "3c12b5",
+    },
+    body: JSON.stringify({
+      sessionId: "3c12b5",
+      runId: "post-fix",
+      hypothesisId: "H5",
+      location: "app/dashboard/leads/page.tsx:LeadsPage",
+      message: "leads page rendered server-side",
+      data: {
+        opportunityCount: opportunities.length,
+        hasUser: Boolean(user?.id),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Upper Navigation Bar */}
@@ -153,64 +175,65 @@ export default async function LeadsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Section 1: Ingestion Intake Form */}
           <div className="h-fit space-y-4 rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-md">
             <h2 className="text-base font-semibold tracking-tight text-white">
-              Ingest Opportunity
+              New Buyer Registration
             </h2>
             <form action={createOpportunity} className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase">
-                  Opportunity Title
+                  Lead / Client Name
                 </label>
                 <input
                   required
                   name="title"
                   type="text"
-                  placeholder="e.g. Enterprise Cloud Migration"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="e.g. John & Mary Smith"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase">
-                  Company / Account Name
+                  Lead Source
                 </label>
                 <input
                   required
                   name="company"
                   type="text"
-                  placeholder="e.g. Acme Corp"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="e.g. Open House on Main St"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase">
-                  Estimated Value ($)
+                  Target Budget / Price Range ($)
                 </label>
                 <input
                   required
                   name="estimated_value"
                   type="number"
                   step="0.01"
-                  placeholder="5000.00"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="450000"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase">
-                  Notes
+                  Latest Touchpoint / Conversation Log
                 </label>
                 <textarea
                   name="notes"
                   rows={3}
-                  placeholder="Add operational details..."
-                  className="w-full resize-none rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="e.g. Pre-approved up to $450k; looking for a 3-bed home in DFW area..."
+                  className="w-full resize-none rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
+                className="w-full cursor-pointer justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
               >
-                Commit to Pipeline
+                Save Client to Pipeline
               </button>
             </form>
           </div>
