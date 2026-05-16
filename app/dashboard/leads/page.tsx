@@ -49,22 +49,104 @@ export default async function LeadsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6 text-slate-100 sm:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Lead Intake Matrix
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Log new prospective opportunities or track your current active
-            system operations.
-          </p>
-          <div className="mt-3">
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Upper Navigation Bar */}
+      <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">
+                  AssistU2Win
+                </span>
+                <span className="hidden rounded-full border border-slate-700 bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-400 sm:inline-block">
+                  Workspace v1.0
+                </span>
+              </div>
+              <div className="flex items-center gap-4 font-mono text-xs">
+                <Link
+                  href="/dashboard"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Overview
+                </Link>
+                <Link
+                  href="/dashboard/leads"
+                  className="border-b-2 border-blue-500 pb-1.5 pt-1 font-bold text-blue-400"
+                >
+                  Lead Matrix
+                </Link>
+                <Link
+                  href="/dashboard/analytics"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Telemetry
+                </Link>
+                <Link
+                  href="/dashboard/archive"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Archive
+                </Link>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <form action="/api/auth/signout" method="POST">
+                <button
+                  type="submit"
+                  className="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
+                >
+                  Sign Out
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        {/* Unified workspace header + cross-links */}
+        <div className="mb-8 flex flex-col gap-4 border-b border-slate-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="mb-1 flex items-center gap-2 font-mono text-xs text-slate-500">
+              <Link
+                href="/dashboard"
+                className="transition-colors hover:text-blue-400"
+              >
+                Workspace
+              </Link>
+              <span>/</span>
+              <span className="text-slate-300">Lead Intake Matrix</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              Pipeline Ingestion Control
+            </h1>
+            <p className="mt-1 text-sm text-slate-400">
+              Log prospective pipeline opportunities or trigger AI copilot
+              trajectory analyses.
+            </p>
+            <div className="mt-2">
+              <Link
+                href="/dashboard/archive"
+                className="text-xs font-semibold text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+              >
+                View archived opportunities
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
             <Link
-              href="/dashboard/archive"
-              className="text-xs font-semibold text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+              href="/dashboard/analytics"
+              className="inline-flex h-fit w-fit items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors hover:bg-slate-700"
             >
-              View archived opportunities
+              View Performance Analytics
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex h-fit w-fit items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+            >
+              Overview Board
             </Link>
           </div>
         </div>
@@ -323,7 +405,7 @@ export default async function LeadsPage() {
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -211,26 +211,57 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
+      {/* Upper Navigation Bar */}
       <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-                AssistU2Win
-              </span>
-              <span className="rounded-full border border-slate-700 bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-400">
-                Workspace v1.0
-              </span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">
+                  AssistU2Win
+                </span>
+                <span className="hidden rounded-full border border-slate-700 bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-400 sm:inline-block">
+                  Workspace v1.0
+                </span>
+              </div>
+              <div className="flex items-center gap-4 font-mono text-xs">
+                <Link
+                  href="/dashboard"
+                  className="border-b-2 border-blue-500 pb-1.5 pt-1 font-bold text-blue-400"
+                >
+                  Overview
+                </Link>
+                <Link
+                  href="/dashboard/leads"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Lead Matrix
+                </Link>
+                <Link
+                  href="/dashboard/analytics"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Telemetry
+                </Link>
+                <Link
+                  href="/dashboard/archive"
+                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
+                >
+                  Archive
+                </Link>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="hidden text-right sm:block">
                 <p className="text-xs font-medium text-slate-300">{fullName}</p>
-                <p className="text-[10px] text-slate-500">Authenticated Member</p>
+                <p className="text-[10px] text-slate-500">
+                  Authenticated Member
+                </p>
               </div>
               <form action="/api/auth/signout" method="POST">
                 <button
                   type="submit"
-                  className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
+                  className="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
                 >
                   Sign Out
                 </button>
