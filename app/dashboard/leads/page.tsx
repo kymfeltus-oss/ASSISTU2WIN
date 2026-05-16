@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { archiveOpportunity, createOpportunity, updateOpportunityStage } from "./actions";
+import { AttachmentTray } from "./AttachmentTray";
 import { OutreachDraftTray } from "./OutreachDraftTray";
 
 export const dynamic = "force-dynamic";
@@ -385,6 +386,8 @@ export default async function LeadsPage() {
                       ) : null}
                     </div>
                     <OutreachDraftTray opportunityId={item.id} />
+                    {/* Document Vault Ingestion Channel */}
+                    <AttachmentTray opportunityId={item.id} />
                     <div className="flex items-center justify-between border-t border-slate-700/60 pt-3">
                       <span className="font-mono text-[10px] text-slate-500">
                         Logged:{" "}
