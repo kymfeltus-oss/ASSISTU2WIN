@@ -1,3 +1,4 @@
+import { AppBrand } from "@/components/AppBrand";
 import { login, signup } from "../actions";
 
 interface PageProps {
@@ -11,10 +12,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
     <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-xl">
         <div>
-          <h2 className="mt-2 text-center text-3xl font-bold tracking-tight text-white">
-            AssistU2Win
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
+          <AppBrand variant="auth" />
+          <p className="mt-4 text-center text-sm text-slate-400">
             Sign in to your account or register below
           </p>
         </div>

@@ -1,3 +1,4 @@
+import { AppBrand } from "@/components/AppBrand";
 import { createClient } from "@/lib/supabase/server";
 import { type DealStage, parseDealStage } from "@/lib/deal-stage";
 import Link from "next/link";
@@ -217,12 +218,7 @@ export default async function DashboardPage() {
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-                  AssistU2Win
-                </span>
-                <span className="hidden rounded-full border border-slate-700 bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-400 sm:inline-block">
-                  Workspace v1.0
-                </span>
+                <AppBrand />
               </div>
               <div className="flex items-center gap-4 font-mono text-xs">
                 <Link

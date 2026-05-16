@@ -69,11 +69,13 @@ export async function proxy(request: NextRequest) {
   }
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isCopilotIntakeWebhook =
+    request.nextUrl.pathname === "/api/copilot-intake";
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.includes(".");
 
-  if (!user && !isAuthPage && !isPublicAsset) {
+  if (!user && !isAuthPage && !isPublicAsset && !isCopilotIntakeWebhook) {
     const redirectResponse = NextResponse.redirect(
       new URL("/login", request.url),
     );
