@@ -6,6 +6,12 @@ export interface AIAnalysisResult {
   confidenceScore: number;
 }
 
+/** Operator profile bounds passed into model system instructions. */
+export interface UserWorkspaceContext {
+  industry: string;
+  roleTitle: string;
+}
+
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
 type OpenAIChatCompletionResponse = {
@@ -47,6 +53,7 @@ function coerceAnalysisResult(parsed: unknown): AIAnalysisResult | null {
 
 export async function analyzeOpportunityNotes(
   notes: string | null,
+  context?: UserWorkspaceContext,
 ): Promise<AIAnalysisResult | null> {
   if (!notes || notes.trim() === "") return null;
 
@@ -57,6 +64,13 @@ export async function analyzeOpportunityNotes(
     );
     return null;
   }
+
+  const industry = context?.industry?.trim() ?? "";
+  const roleTitle = context?.roleTitle?.trim() ?? "";
+  const businessNiche =
+    industry || roleTitle
+      ? `Target Vertical: ${industry || "General"}, User Role: ${roleTitle || "Operator"}`
+      : "Target Vertical: Cross-Enterprise CRM Operational Data Mapping";
 
   try {
     const response = await fetch(OPENAI_CHAT_URL, {
@@ -74,7 +88,9 @@ export async function analyzeOpportunityNotes(
             content: `You are an expert CRM automation analyst. Analyze the user's deal notes and return a strict JSON object with these keys:
             - "suggestedStage": Must match exactly one of these tokens based on context: "INTAKE", "PRE_APPROVAL", "HOME_SHOPPING", "UNDER_CONTRACT", "CLOSING_ROOM".
             - "nextStepAction": A concrete, short action item (under 10 words).
-            - "confidenceScore": A decimal number between 0.0 and 1.0.`,
+            - "confidenceScore": A decimal number between 0.0 and 1.0.
+
+            OPERATIONAL ENVIRONMENT CONTEXT: Adjust your scoring weights and parameters to align with this operator profiling environment: ${businessNiche}.`,
           },
           {
             role: "user",
@@ -111,6 +127,7 @@ export async function generateOutreachDraft(
   stage: string,
   company: string,
   notes: string | null,
+  context?: UserWorkspaceContext,
 ): Promise<string | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -119,6 +136,13 @@ export async function generateOutreachDraft(
     );
     return null;
   }
+
+  const industry = context?.industry?.trim() ?? "";
+  const roleTitle = context?.roleTitle?.trim() ?? "";
+  const businessNiche =
+    industry && roleTitle
+      ? `Write using professional norms for the [${industry}] sector from the voice of a [${roleTitle}].`
+      : "Write using standard generic executive business norms.";
 
   try {
     const response = await fetch(OPENAI_CHAT_URL, {
@@ -136,7 +160,9 @@ export async function generateOutreachDraft(
 Generate a concise, impactful follow-up email draft to an account based on their current workspace pipeline state.
 - Maintain a confident, supportive, and non-salesy tone.
 - Keep the entire body under 75 words.
-- Do not include subject lines or placeholders like [Your Name]. Use generic professional sign-offs.`,
+- Do not include subject lines or placeholders like [Your Name]. Use generic professional sign-offs.
+
+            VERTICAL WRITING SPECIFICATION: ${businessNiche}`,
           },
           {
             role: "user",

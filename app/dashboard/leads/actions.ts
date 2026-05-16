@@ -56,7 +56,19 @@ export async function createOpportunity(formData: FormData) {
 
   const estimated_value = parseEstimatedValue(rawValue);
 
-  const aiInsights = await analyzeOpportunityNotes(notes);
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("industry, role_title")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const workspaceContext = {
+    industry: typeof prof?.industry === "string" ? prof.industry.trim() : "",
+    roleTitle:
+      typeof prof?.role_title === "string" ? prof.role_title.trim() : "",
+  };
+
+  const aiInsights = await analyzeOpportunityNotes(notes, workspaceContext);
 
   try {
     const { data: opt, error } = await supabase
@@ -275,11 +287,28 @@ export async function getOutreachDraftForLead(
     return { ok: false, error: "Lead not found or access denied." };
   }
 
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("industry, role_title")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const workspaceContext = {
+    industry: typeof prof?.industry === "string" ? prof.industry.trim() : "",
+    roleTitle:
+      typeof prof?.role_title === "string" ? prof.role_title.trim() : "",
+  };
+
   const company = typeof row.company === "string" ? row.company : "";
   const stage = typeof row.stage === "string" ? row.stage : "INTAKE";
   const notes = typeof row.notes === "string" ? row.notes : null;
 
-  const draft = await generateOutreachDraft(stage, company, notes);
+  const draft = await generateOutreachDraft(
+    stage,
+    company,
+    notes,
+    workspaceContext,
+  );
   if (!draft) {
     return {
       ok: false,

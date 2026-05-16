@@ -23,10 +23,18 @@ export async function completeOnboarding(formData: FormData) {
     typeof formData.get("companyName") === "string"
       ? (formData.get("companyName") as string).trim()
       : "";
+  const industry =
+    typeof formData.get("industry") === "string"
+      ? (formData.get("industry") as string).trim()
+      : "";
+  const roleTitle =
+    typeof formData.get("roleTitle") === "string"
+      ? (formData.get("roleTitle") as string).trim()
+      : "";
 
-  if (!fullName || !companyName) {
+  if (!fullName || !companyName || !industry || !roleTitle) {
     return redirect(
-      "/onboarding?error=Full Name and Company Name are required fields.",
+      "/onboarding?error=All workspace profiling fields are required.",
     );
   }
 
@@ -35,6 +43,9 @@ export async function completeOnboarding(formData: FormData) {
       .from("profiles")
       .update({
         full_name: fullName,
+        company_name: companyName,
+        industry,
+        role_title: roleTitle,
         onboarding_complete: true,
         updated_at: new Date().toISOString(),
       })
@@ -45,7 +56,7 @@ export async function completeOnboarding(formData: FormData) {
     await supabase.from("audit_logs").insert({
       user_id: user.id,
       action_type: "AUTH",
-      description: `User completed onboarding system matrix setup. Workspace configured for "${companyName}".`,
+      description: `User completed profiling matrix setup. Context locked to [${industry}] Market as a [${roleTitle}].`,
     });
   } catch (error) {
     console.error("[ONBOARDING_SUBMISSION_FAILURE]:", error);

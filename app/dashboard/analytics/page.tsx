@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 type OpportunityMetricsRow = {
   estimated_value: number | string | null;
   stage: string | null;
-  created_at: string;
 };
 
 function numericValue(raw: number | string | null | undefined): number {
@@ -19,6 +18,8 @@ function numericValue(raw: number | string | null | undefined): number {
   const n = parseFloat(raw);
   return Number.isFinite(n) ? n : 0;
 }
+
+const QUARTERLY_TARGET = 100_000;
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -35,7 +36,7 @@ export default async function AnalyticsPage() {
   try {
     const { data, error: queryError } = await supabase
       .from("opportunities")
-      .select("estimated_value, stage, created_at")
+      .select("estimated_value, stage")
       .eq("user_id", user.id)
       .eq("is_archived", false);
 
@@ -57,6 +58,11 @@ export default async function AnalyticsPage() {
 
   const averageValue = totalCount > 0 ? totalValue / totalCount : 0;
 
+  const targetPercentage = Math.min(
+    100,
+    Math.max(0, (totalValue / QUARTERLY_TARGET) * 100),
+  );
+
   let intakeCount = 0;
   let progressCount = 0;
   let wonCount = 0;
@@ -74,6 +80,11 @@ export default async function AnalyticsPage() {
 
   const conversionRate =
     totalCount > 0 ? ((wonCount / totalCount) * 100).toFixed(1) : "0.0";
+
+  const moneyOpts: Intl.NumberFormatOptions = {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
@@ -132,38 +143,68 @@ export default async function AnalyticsPage() {
       </nav>
 
       <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="border-b border-slate-800 pb-6">
-          <div>
-            <div className="mb-1 flex items-center gap-2 font-mono text-xs text-slate-500">
-              <Link
-                href="/dashboard"
-                className="transition-colors hover:text-blue-400"
-              >
-                Workspace
-              </Link>
-              <span>/</span>
-              <span className="text-slate-300">Analytics Telemetry</span>
+        <div>
+          <div className="mb-1 flex items-center gap-2 font-mono text-xs text-slate-500">
+            <Link
+              href="/dashboard"
+              className="transition-colors hover:text-blue-400"
+            >
+              Workspace
+            </Link>
+            <span>/</span>
+            <span className="text-slate-300">Analytics Telemetry</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            System Performance Matrix
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Advanced financial overview and pipeline health statistics.
+          </p>
+        </div>
+
+        {/* Financial Quarterly Target Matrix Progress Bar Display */}
+        <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-md">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold tracking-tight text-white">
+                Quarterly Gross Equity Pipeline Target
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Cumulative goal trajectory tracking bar for the active workflow
+                period.
+              </p>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              System Performance Matrix
-            </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Advanced financial overview and pipeline health statistics.
-            </p>
+            <div className="text-right sm:text-right">
+              <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-bold text-emerald-400">
+                {targetPercentage.toFixed(1)}% Achieved
+              </span>
+            </div>
+          </div>
+
+          <div className="h-3 w-full overflow-hidden rounded-full border border-slate-700/50 bg-slate-900">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+              style={{ width: `${targetPercentage}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between pt-1 font-mono text-[10px] text-slate-500">
+            <span>Current: ${totalValue.toLocaleString(undefined, moneyOpts)}</span>
+            <span>
+              Target: $
+              {QUARTERLY_TARGET.toLocaleString(undefined, moneyOpts)}
+            </span>
           </div>
         </div>
 
+        {/* High-Density Performance Cards */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
           <div className="space-y-1 rounded-xl border border-slate-700 bg-slate-800 p-5 shadow-sm">
             <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
               Gross Equity Volume
             </span>
             <p className="font-mono text-xl font-bold text-white">
-              $
-              {totalValue.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              ${totalValue.toLocaleString(undefined, moneyOpts)}
             </p>
           </div>
           <div className="space-y-1 rounded-xl border border-slate-700 bg-slate-800 p-5 shadow-sm">
@@ -171,11 +212,7 @@ export default async function AnalyticsPage() {
               Mean Opportunity Value
             </span>
             <p className="font-mono text-xl font-bold text-blue-400">
-              $
-              {averageValue.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              ${averageValue.toLocaleString(undefined, moneyOpts)}
             </p>
           </div>
           <div className="space-y-1 rounded-xl border border-slate-700 bg-slate-800 p-5 shadow-sm">
@@ -196,6 +233,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
+        {/* Structural Stage Dispersal Ledger Grid */}
         <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-md">
           <h2 className="text-base font-semibold tracking-tight text-white">
             Pipeline Stage Densities

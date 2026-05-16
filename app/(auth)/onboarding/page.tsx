@@ -20,8 +20,8 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
             Configure Your Workspace
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            Please finalize your profile details to instantiate the analytical
-            telemetry layer.
+            Please finalize your operational profile to instantiate the custom
+            AI telemetry layer.
           </p>
         </div>
 
@@ -65,6 +65,55 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 placeholder="Acme Corporation"
                 className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="roleTitle"
+                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+              >
+                Your Professional Role
+              </label>
+              <input
+                id="roleTitle"
+                name="roleTitle"
+                type="text"
+                required
+                placeholder="e.g., Executive Producer, Senior Analyst"
+                className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="industry"
+                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+              >
+                Market Segment / Industry
+              </label>
+              <select
+                id="industry"
+                name="industry"
+                required
+                className="block w-full cursor-pointer appearance-none rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              >
+                <option value="" className="text-slate-500">
+                  Select industry branch…
+                </option>
+                <option value="Real Estate">
+                  Real Estate & Mortgage Brokerage
+                </option>
+                <option value="Consulting">
+                  Strategic Consulting & Advisory
+                </option>
+                <option value="Technology">
+                  Software & Digital Technology
+                </option>
+                <option value="Entertainment">
+                  Media & Creative Entertainment
+                </option>
+                <option value="Other">Cross-Vertical / Other Enterprise</option>
+              </select>
             </div>
           </div>
 
