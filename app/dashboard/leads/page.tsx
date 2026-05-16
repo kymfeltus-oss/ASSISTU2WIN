@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { archiveOpportunity, createOpportunity, updateOpportunityStage } from "./actions";
-import { AttachmentTray } from "./AttachmentTray";
+import AttachmentTray from "./AttachmentTray";
 import { OutreachDraftTray } from "./OutreachDraftTray";
 
 export const dynamic = "force-dynamic";

@@ -36,6 +36,22 @@ AssistU2Win is an ecosystem application that links **Buyers**, **Sellers**, **Re
 
 Before **destructive** or high-blast-radius edits, **stop and discuss with the user** (or document a clear, blocking rationale in the PR if the user is unavailable). Destructive includes: deleting tables/columns/migrations, broad renames across modules, RLS policy rewrites, auth flow changes, mass file moves, major dependency upgrades that change runtime semantics, or anything that risks data loss or production outage.
 
+## Real estate and mortgage domain language
+
+### UI form label restrictions
+- NEVER use corporate B2B software engineering or generic abstract terms on user-facing layouts, inputs, variables, or console tracking statements.
+- Apply this mandatory terminology mapping across the entire repository:
+  * FORBIDDEN: "Opportunity" or "Title" ➔ MANDATORY: "Lead / Client Name" (e.g., John & Mary Smith)
+  * FORBIDDEN: "Company" or "Account Name" ➔ MANDATORY: "Lead Source" (e.g., Open House, Facebook Ad)
+  * FORBIDDEN: "Estimated Value" ➔ MANDATORY: "Target Budget / Price Range"
+  * FORBIDDEN: "Notes" ➔ MANDATORY: "Latest Touchpoint / Conversation Log"
+  * FORBIDDEN: "Deals" or "Nodes" ➔ MANDATORY: "Active Buyers" or "Pipeline Clients"
+
+### AI prompt enforcement
+- All AI copy prompts, automated email outreach generation utilities, and trajectory summaries generated via 'lib/ai-engine.ts' must speak from the direct voice of a Real Estate Agent, Mortgage Broker, or Transaction Coordinator.
+- Never mention B2B accounts, sales pipelines, or product items to homebuyers.
+
+
 If the user has **already approved** the specific destructive action in the current task, proceed without repeating the pitch.
 
 ## Anti-patterns
@@ -63,3 +79,5 @@ async function load(id: string): Promise<LoadResult> {
   }
 }
 ```
+
+

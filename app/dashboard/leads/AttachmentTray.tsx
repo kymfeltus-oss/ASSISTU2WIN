@@ -3,11 +3,11 @@
 import { useState, type ChangeEvent } from "react";
 import { attachFileToOpportunity, getUploadPresignedUrl } from "./storage-actions";
 
-type AttachmentTrayProps = {
+interface AttachmentTrayProps {
   opportunityId: string;
-};
+}
 
-export function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
+export default function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ export function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
     if (!file) return;
 
     setUploading(true);
-    setStatus("Securing upload matrix channel...");
+    setStatus("Securing channel...");
 
     try {
       const { url, path } = await getUploadPresignedUrl(
@@ -24,7 +24,7 @@ export function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
         opportunityId,
       );
 
-      setStatus("Transferring binary data payload...");
+      setStatus("Transferring blocks...");
       const uploadResponse = await fetch(url, {
         method: "PUT",
         body: file,
@@ -38,8 +38,8 @@ export function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
       await attachFileToOpportunity(opportunityId, path, file.name);
       setStatus("Upload successful!");
     } catch (err) {
-      console.error("[ATTACHMENT_TRAY_FAILURE]", err);
-      setStatus("Upload matrix failure. Retry configuration.");
+      console.error(err);
+      setStatus("Upload failure. Retry.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -74,7 +74,7 @@ export function AttachmentTray({ opportunityId }: AttachmentTrayProps) {
           className="hidden"
           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
         />
-        {uploading ? "Uploading Attachment..." : "Attach Vault Document"}
+        {uploading ? "Uploading Attachment..." : "📁 Attach Vault Document"}
       </label>
     </div>
   );

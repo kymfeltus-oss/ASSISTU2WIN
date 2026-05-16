@@ -10,8 +10,12 @@ export async function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    const emptyUrl = supabaseUrl === "";
+    const emptyKey = supabaseAnonKey === "";
     throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      emptyUrl || emptyKey
+        ? "NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is set but empty in .env.local. Paste values from Supabase → Settings → API, or fix Vercel env vars (vercel env pull currently returns empty strings)."
+        : "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local",
     );
   }
 
