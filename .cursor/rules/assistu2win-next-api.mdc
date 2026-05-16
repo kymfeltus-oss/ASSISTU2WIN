@@ -1,0 +1,45 @@
+---
+description: Next.js App Router API route handlers, Edge runtime for AI/messaging, and safe environment variables
+globs: app/api/**/*.ts
+alwaysApply: false
+---
+
+# AssistU2Win — Next.js API routes
+
+## Route handlers (App Router)
+
+- Implement HTTP APIs with **Route Handlers** in `app/api/.../route.ts` using named exports: `GET`, `POST`, `PUT`, `PATCH`, `DELETE` as appropriate.
+- Validate input (query, body, headers) before side effects. Return correct status codes (`400` validation, `401`/`403` auth, `404` missing, `409` conflicts, `500` only for unexpected failures).
+- Use **explicit** TypeScript types for `Request` parsing results and JSON bodies you return. Never use `any`.
+
+## Edge runtime (high-concurrency AI and messaging)
+
+- Use Edge only where it **reduces cold starts** and **fits the dependency surface**:
+
+```typescript
+export const runtime = "edge";
+```
+
+- Reserve `runtime = "edge"` for **high-concurrency** paths such as **AI** completions/streaming and **real-time messaging** proxies, not for every route by default.
+- If a route needs Node-only APIs or packages incompatible with Edge, **omit** the edge export and use the default Node runtime.
+
+## Environment variables
+
+- **`NEXT_PUBLIC_*`**: only for values that are **safe to expose** to the browser (e.g. public Supabase URL, anon key when required by the client SDK). Never put secrets in `NEXT_PUBLIC_`.
+- **Server-only**: `process.env.OPENAI_API_KEY`, service role keys, webhook secrets, signing keys — read **only** in server code (route handlers, server actions, server-only modules). Ensure they are never referenced from client components in a way that bundles them for the browser.
+- Never log env values. Fail fast with a clear configuration error in development; generic safe errors in production responses.
+
+## Error responses
+
+- Return JSON error bodies with stable `code`/`message` fields where helpful. Do not leak stack traces or internal paths to clients.
+
+```typescript
+type ApiErrorBody = { error: { code: string; message: string } };
+
+function jsonError(status: number, body: ApiErrorBody) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+}
+```

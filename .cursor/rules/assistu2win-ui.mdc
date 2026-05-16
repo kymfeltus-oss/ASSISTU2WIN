@@ -1,0 +1,42 @@
+---
+description: Tailwind layout, shadcn/ui usage, Lucide icons, and AssistU2Win real estate color language
+globs: "**/*.tsx, components/**/*"
+alwaysApply: false
+---
+
+# AssistU2Win — UI and visual language
+
+## Stack conventions
+
+- **Tailwind CSS** for layout, spacing, and responsive behavior. Prefer utility-first composition; extract repeated patterns into small components instead of giant unmaintainable class strings.
+- **shadcn/ui** for accessible primitives (buttons, dialogs, forms, sheets). Compose primitives rather than forking vendor source unless customization is required.
+- **Lucide React** for icons. Import only the icons used (`import { Home } from "lucide-react"`) to keep bundles lean.
+
+## Layout and accessibility
+
+- Mobile-first breakpoints; interactive controls should meet comfortable touch sizing (roughly **44×44px** minimum where practical).
+- Maintain color **contrast** (WCAG-minded): do not rely on color alone for state; pair with text, icons, or patterns.
+- Prefer semantic HTML (`main`, `nav`, `button`, `label` associated with inputs) and shadcn’s Radix-backed behavior for focus management.
+
+## Real estate color language (AssistU2Win)
+
+Use a **high-trust fintech plus real estate** palette:
+
+- **Trustworthy blues** — primary actions, links, key highlights (calm, institutional trust).
+- **Deep slates** — surfaces, primary text, borders, chrome (serious, readable, premium).
+- **Success greens** — **completed** tracker stages, positive confirmations, “done” markers in the pipeline.
+
+Implementation guidance:
+
+- Encode the palette as **CSS variables** in the global theme (for example `--primary`, `--foreground`, `--success`) and map Tailwind tokens to those variables so light/dark or brand tweaks stay centralized.
+- Tracker rows: default neutral slate; **current** stage uses trustworthy blue accent; **completed** past stages use success green (icon plus compact label), distinct from error or destructive red.
+
+## Components
+
+- Functional components with explicit `props` types. Keep atoms small (for example `StageBadge`, `DealTrackerRow`).
+- Loading and error states should be **first-class** in the UI (skeletons, inline alerts), not blank screens.
+
+## Anti-patterns
+
+- Avoid raw hex scattered across many files; use theme tokens.
+- Do not use `any` for component props or tracker data; model stage as `DealStage` from the shared domain types module.

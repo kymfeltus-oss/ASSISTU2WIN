@@ -1,0 +1,65 @@
+---
+description: AssistU2Win core product context, TypeScript guardrails, async safety, and architectural circuit breaker
+alwaysApply: true
+---
+
+# AssistU2Win — Core standards
+
+## Product context
+
+AssistU2Win is an ecosystem application that links **Buyers**, **Sellers**, **Realtors**, **Mortgage companies**, and **Closing companies** in a single trustworthy workflow. Features and data models should reflect these roles, their permissions, and handoffs between parties.
+
+## Strict TypeScript
+
+- Use **strict** TypeScript everywhere. Enable and honor compiler strictness in the project config.
+- **Never** use `any`. Prefer `unknown` at boundaries, then narrow with type guards or validated schemas.
+- Define **explicit** interfaces or types for API request bodies, response shapes, component props, and database row shapes consumed by the app.
+- Prefer `readonly` for immutable config and discriminated unions for variant states.
+
+## Async and errors
+
+- Wrap **all** asynchronous I/O (network, database, filesystem, OpenAI) in `try/catch` (or equivalent `.catch` with consistent handling).
+- Do not swallow errors: log with context, then **rethrow**, return a typed error result, or map to a safe HTTP/UI response.
+- Prefer typed errors or result types (`{ ok: true, data } | { ok: false, error }`) over bare strings where it clarifies control flow.
+
+## React components
+
+- Use **functional components** only, with explicit props types (`type Props = { ... }` or `interface Props`).
+- Prefer small, composable UI pieces and colocate hooks where they serve a single responsibility.
+
+## Server logging
+
+- On the server, log failures with **readable** messages and structured context (route name, user/session id when safe, operation). Never log secrets, tokens, or full PII.
+- Client surfaces should show **user-safe** messages; technical detail stays in logs.
+
+## Architectural Circuit Breaker (destructive change)
+
+Before **destructive** or high-blast-radius edits, **stop and discuss with the user** (or document a clear, blocking rationale in the PR if the user is unavailable). Destructive includes: deleting tables/columns/migrations, broad renames across modules, RLS policy rewrites, auth flow changes, mass file moves, major dependency upgrades that change runtime semantics, or anything that risks data loss or production outage.
+
+If the user has **already approved** the specific destructive action in the current task, proceed without repeating the pitch.
+
+## Anti-patterns
+
+```typescript
+// BAD — untyped escape hatch
+function load(id: any) {
+  return id;
+}
+
+// GOOD — explicit contract
+type DealSummary = { id: string; title: string };
+
+type LoadResult =
+  | { ok: true; id: string; payload: DealSummary }
+  | { ok: false; code: "NOT_FOUND" | "FORBIDDEN"; message: string };
+
+async function load(id: string): Promise<LoadResult> {
+  try {
+    const summary: DealSummary = { id, title: "Example" };
+    return { ok: true, id, payload: summary };
+  } catch (error) {
+    console.error("load failed", { id, error });
+    return { ok: false, code: "NOT_FOUND", message: "Unable to load deal." };
+  }
+}
+```

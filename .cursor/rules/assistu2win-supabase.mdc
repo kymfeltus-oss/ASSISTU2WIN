@@ -1,0 +1,61 @@
+---
+description: Supabase SSR/client patterns, RLS-first data access, transactions, and typed deal stages for AssistU2Win
+globs: "**/*supabase*, lib/**/*.ts"
+alwaysApply: false
+---
+
+# AssistU2Win — Supabase and data layer
+
+## Packages and setup
+
+- Use **`@supabase/supabase-js`** for the client surface and **`@supabase/ssr`** for cookie-aware server rendering and Route Handler usage.
+- Create **small dedicated modules** (for example `lib/supabase/server.ts`, `lib/supabase/client.ts`) rather than ad-hoc `createClient` calls scattered through the app.
+- Never instantiate a **service role** client in code that can run in the browser or in shared modules imported by client components.
+
+## Row Level Security (RLS) first
+
+- Assume **RLS is enforced** on all user-scoped tables. Queries and mutations must be compatible with the authenticated subject’s policies.
+- Do not bypass RLS with the service role key except in **trusted server-only** jobs (admin scripts, migrations, background workers) — never from client bundles or user-triggered routes without explicit guardrails.
+- When adding tables or policies, design for **least privilege**: default deny, explicit grants per role (buyer, seller, realtor, mortgage, closing).
+
+## Transactional writes
+
+- For multi-step writes (for example stage transition plus audit log plus notification row), use **transaction-safe** patterns: a single Postgres function (`rpc`) or an explicit transaction API where available, so partial updates cannot leave inconsistent state.
+- On failure, roll back and return a typed error; log server-side with operation id, never with raw row secrets.
+
+## Deal stages (strict types, future PostgreSQL enums)
+
+The product uses **five** sequential stages. Application types **must** match the future PostgreSQL enum values **exactly** (names and spelling).
+
+| Order | Stage name     | Enum value       |
+|------:|----------------|------------------|
+| 1     | Intake         | `INTAKE`         |
+| 2     | Pre-Approval   | `PRE_APPROVAL`   |
+| 3     | Home Shopping  | `HOME_SHOPPING`  |
+| 4     | Under Contract | `UNDER_CONTRACT` |
+| 5     | Closing Room   | `CLOSING_ROOM`   |
+
+Define a **single source of truth** in TypeScript, for example:
+
+```typescript
+export const DEAL_STAGE_VALUES = [
+  "INTAKE",
+  "PRE_APPROVAL",
+  "HOME_SHOPPING",
+  "UNDER_CONTRACT",
+  "CLOSING_ROOM",
+] as const;
+
+export type DealStage = (typeof DEAL_STAGE_VALUES)[number];
+
+export function isDealStage(value: unknown): value is DealStage {
+  return typeof value === "string" && (DEAL_STAGE_VALUES as readonly string[]).includes(value);
+}
+```
+
+- UI labels (for example “Pre-Approval”) are **display** mappings; persisted values use the **enum tokens** above.
+- When migrations add `CREATE TYPE deal_stage AS ENUM (...)`, keep the TypeScript union **in lockstep** with the database definition.
+
+## Migrations and destructive changes
+
+- Schema or RLS changes that can drop or reshape production data fall under the **Architectural Circuit Breaker** in `assistu2win-core.mdc`: confirm intent before executing destructive SQL or policy rewrites.
