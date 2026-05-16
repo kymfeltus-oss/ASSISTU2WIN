@@ -106,3 +106,64 @@ export async function analyzeOpportunityNotes(
 export function parseStoredAiInsights(raw: unknown): AIAnalysisResult | null {
   return coerceAnalysisResult(raw);
 }
+
+export async function generateOutreachDraft(
+  stage: string,
+  company: string,
+  notes: string | null,
+): Promise<string | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn(
+      "[AI_ENGINE_WARNING]: OPENAI_API_KEY is missing. Skipping outreach generation.",
+    );
+    return null;
+  }
+
+  try {
+    const response = await fetch(OPENAI_CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an elite, highly professional executive communications assistant.
+Generate a concise, impactful follow-up email draft to an account based on their current workspace pipeline state.
+- Maintain a confident, supportive, and non-salesy tone.
+- Keep the entire body under 75 words.
+- Do not include subject lines or placeholders like [Your Name]. Use generic professional sign-offs.`,
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              account: company,
+              current_stage_trajectory: stage,
+              operational_notes: notes?.trim() || "No recent notes logged.",
+            }),
+          },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const data = (await response.json()) as OpenAIChatCompletionResponse;
+
+    if (!response.ok) {
+      const msg = data.error?.message ?? response.statusText;
+      throw new Error(`OpenAI response failure: ${msg}`);
+    }
+
+    const raw = data.choices?.[0]?.message?.content;
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch (error: unknown) {
+    console.error("[AI_OUTREACH_ENGINE_FAILURE]", { error });
+    return null;
+  }
+}

@@ -1,6 +1,6 @@
 "use server";
 
-import { analyzeOpportunityNotes } from "@/lib/ai-engine";
+import { analyzeOpportunityNotes, generateOutreachDraft } from "@/lib/ai-engine";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type DealStage, parseDealStage } from "@/lib/deal-stage";
@@ -122,7 +122,7 @@ export async function updateOpportunityStage(
   targetStage: DealStage,
   ..._args: unknown[]
 ) {
-  void _args;
+  const isAiTrigger = _args.includes("AI_ACCEPTED");
   const supabase = await createClient();
 
   const {
@@ -164,8 +164,10 @@ export async function updateOpportunityStage(
     const { error: auditError } = await supabase.from("audit_logs").insert({
       user_id: user.id,
       opportunity_id: id,
-      action_type: "STAGE_TRANSITION",
-      description: `Evolved "${currentOpt?.title ?? "Opportunity"}" stage matrix from ${priorStageLabel} to ${targetStage}.`,
+      action_type: isAiTrigger ? "AI_ANALYSIS" : "STAGE_TRANSITION",
+      description: isAiTrigger
+        ? `Operator accepted AI trajectory recommendation for "${currentOpt?.title ?? "Opportunity"}": Shipped from ${priorStageLabel} to ${targetStage}.`
+        : `Evolved "${currentOpt?.title ?? "Opportunity"}" stage matrix from ${priorStageLabel} to ${targetStage}.`,
     });
 
     if (auditError) {
@@ -181,4 +183,170 @@ export async function updateOpportunityStage(
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/leads");
+}
+
+export async function archiveOpportunity(id: string, ..._args: unknown[]) {
+  void _args;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error(
+      "[LEAD_ACTION_UNAUTHORIZED]: Must be authenticated to archive opportunities.",
+    );
+  }
+
+  try {
+    const { data: currentOpt, error: fetchError } = await supabase
+      .from("opportunities")
+      .select("title")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError) {
+      console.error("[LEAD_ARCHIVE_PREFETCH]", { message: fetchError.message });
+    }
+
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        is_archived: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) throw error;
+
+    const { error: auditError } = await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      opportunity_id: id,
+      action_type: "ARCHIVE",
+      description: `Archived opportunity pipeline record: "${currentOpt?.title ?? "Opportunity"}". Removed from active tracking grids.`,
+    });
+
+    if (auditError) {
+      console.error("[AUDIT_LOG_ARCHIVE_FAILURE]", {
+        message: auditError.message,
+        opportunityId: id,
+      });
+    }
+  } catch (error: unknown) {
+    console.error("[LEAD_ARCHIVE_FAILURE]", { error });
+    throw new Error("Failed to archive the opportunity.");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/leads");
+}
+
+export type OutreachDraftResult =
+  | { ok: true; draft: string }
+  | { ok: false; error: string };
+
+export async function getOutreachDraftForLead(
+  opportunityId: string,
+  ..._args: unknown[]
+): Promise<OutreachDraftResult> {
+  void _args;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { ok: false, error: "You must be signed in to generate outreach." };
+  }
+
+  const { data: row, error: rowError } = await supabase
+    .from("opportunities")
+    .select("company, stage, notes")
+    .eq("id", opportunityId)
+    .eq("user_id", user.id)
+    .eq("is_archived", false)
+    .maybeSingle();
+
+  if (rowError || !row) {
+    return { ok: false, error: "Lead not found or access denied." };
+  }
+
+  const company = typeof row.company === "string" ? row.company : "";
+  const stage = typeof row.stage === "string" ? row.stage : "INTAKE";
+  const notes = typeof row.notes === "string" ? row.notes : null;
+
+  const draft = await generateOutreachDraft(stage, company, notes);
+  if (!draft) {
+    return {
+      ok: false,
+      error:
+        "Could not generate a draft. Confirm OPENAI_API_KEY and try again.",
+    };
+  }
+
+  return { ok: true, draft };
+}
+
+export async function restoreOpportunity(id: string, ..._args: unknown[]) {
+  void _args;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error(
+      "[LEAD_ACTION_UNAUTHORIZED]: Must be authenticated to restore opportunities.",
+    );
+  }
+
+  try {
+    const { data: currentOpt, error: fetchError } = await supabase
+      .from("opportunities")
+      .select("title")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError) {
+      console.error("[LEAD_RESTORE_PREFETCH]", { message: fetchError.message });
+    }
+
+    const { error } = await supabase
+      .from("opportunities")
+      .update({
+        is_archived: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) throw error;
+
+    const { error: auditError } = await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      opportunity_id: id,
+      action_type: "RESTORE",
+      description: `Restored opportunity pipeline record: "${currentOpt?.title ?? "Opportunity"}". Returned to active tracking grids.`,
+    });
+
+    if (auditError) {
+      console.error("[AUDIT_LOG_RESTORE_FAILURE]", {
+        message: auditError.message,
+        opportunityId: id,
+      });
+    }
+  } catch (error: unknown) {
+    console.error("[LEAD_RESTORATION_FAILURE]", { error });
+    throw new Error("Failed to restore the opportunity.");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard/archive");
 }

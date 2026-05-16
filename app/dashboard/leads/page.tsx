@@ -1,7 +1,9 @@
 import { parseStoredAiInsights } from "@/lib/ai-engine";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createOpportunity, updateOpportunityStage } from "./actions";
+import { archiveOpportunity, createOpportunity, updateOpportunityStage } from "./actions";
+import { OutreachDraftTray } from "./OutreachDraftTray";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function LeadsPage() {
       .from("opportunities")
       .select("*")
       .eq("user_id", user.id)
+      .eq("is_archived", false)
       .order("created_at", { ascending: false });
 
     if (queryError) {
@@ -56,6 +59,14 @@ export default async function LeadsPage() {
             Log new prospective opportunities or track your current active
             system operations.
           </p>
+          <div className="mt-3">
+            <Link
+              href="/dashboard/archive"
+              className="text-xs font-semibold text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline"
+            >
+              View archived opportunities
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -226,10 +237,18 @@ export default async function LeadsPage() {
                             </button>
                           </form>
                         ) : null}
+                        <form action={archiveOpportunity.bind(null, item.id)}>
+                          <button
+                            type="submit"
+                            className="cursor-pointer rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-red-400 transition-all hover:border-red-500/20 hover:bg-red-500/10"
+                          >
+                            Archive Record
+                          </button>
+                        </form>
                       </div>
 
                       {aiInsights ? (
-                        <div className="mt-3 space-y-1.5 rounded-lg border border-blue-500/10 bg-blue-500/5 p-3">
+                        <div className="mt-3 space-y-2 rounded-lg border border-blue-500/10 bg-blue-500/5 p-3">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-bold tracking-wider text-blue-400 uppercase">
                               AI Copilot Analysis
@@ -237,25 +256,53 @@ export default async function LeadsPage() {
                             <span className="font-mono text-[10px] text-slate-400">
                               Confidence:{" "}
                               <span className="font-bold text-emerald-400">
-                                {(aiInsights.confidenceScore * 100).toFixed(0)}%
+                                {(
+                                  (aiInsights.confidenceScore || 0) * 100
+                                ).toFixed(0)}
+                                %
                               </span>
                             </span>
                           </div>
+
                           <p className="text-xs text-slate-300">
                             <span className="font-semibold text-slate-400">
                               Next Action:
                             </span>{" "}
                             {aiInsights.nextStepAction}
                           </p>
-                          <p className="text-[10px] text-slate-400">
-                            <span className="font-semibold text-slate-500">
-                              Predicted Trajectory:
-                            </span>{" "}
-                            {aiInsights.suggestedStage}
-                          </p>
+
+                          <div className="mt-1 flex items-center justify-between gap-4 rounded border border-slate-700/40 bg-slate-900/40 p-2">
+                            <p className="text-[10px] text-slate-400">
+                              <span className="font-semibold text-slate-500">
+                                Predicted Trajectory:
+                              </span>{" "}
+                              <span className="font-mono font-bold text-blue-400">
+                                {aiInsights.suggestedStage}
+                              </span>
+                            </p>
+
+                            {item.stage !== aiInsights.suggestedStage ? (
+                              <form
+                                action={updateOpportunityStage.bind(
+                                  null,
+                                  item.id,
+                                  aiInsights.suggestedStage,
+                                  "AI_ACCEPTED",
+                                )}
+                              >
+                                <button
+                                  type="submit"
+                                  className="cursor-pointer rounded border border-blue-500 bg-blue-600/80 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm transition-colors hover:bg-blue-500"
+                                >
+                                  Accept Suggestion
+                                </button>
+                              </form>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                     </div>
+                    <OutreachDraftTray opportunityId={item.id} />
                     <div className="flex items-center justify-between border-t border-slate-700/60 pt-3">
                       <span className="font-mono text-[10px] text-slate-500">
                         Logged:{" "}
