@@ -1,5 +1,6 @@
 "use server";
 
+import { analyzeOpportunityNotes } from "@/lib/ai-engine";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type DealStage, parseDealStage } from "@/lib/deal-stage";
@@ -37,9 +38,7 @@ export async function createOpportunity(formData: FormData) {
     error: authError,
   } = await supabase.auth.getUser();
   if (authError || !user) {
-    throw new Error(
-      "[LEAD_ACTION_UNAUTHORIZED]: Must be signed in to log pipeline leads.",
-    );
+    throw new Error("[LEAD_ACTION_UNAUTHORIZED]: Must be signed in.");
   }
 
   const title = getTrimmedString(formData, "title");
@@ -57,17 +56,58 @@ export async function createOpportunity(formData: FormData) {
 
   const estimated_value = parseEstimatedValue(rawValue);
 
+  const aiInsights = await analyzeOpportunityNotes(notes);
+
   try {
-    const { error } = await supabase.from("opportunities").insert({
-      user_id: user.id,
-      title,
-      company,
-      estimated_value,
-      stage,
-      notes,
-    });
+    const { data: opt, error } = await supabase
+      .from("opportunities")
+      .insert({
+        user_id: user.id,
+        title,
+        company,
+        estimated_value,
+        stage,
+        notes,
+        ai_insights: aiInsights,
+      })
+      .select("id")
+      .single();
 
     if (error) throw error;
+
+    const ingestDescription = `Ingested new opportunity pipeline record: "${title}" for ${company}.${aiInsights ? " Automated AI matrix suggestions indexed successfully." : ""}`;
+
+    const { error: auditIngestError } = await supabase
+      .from("audit_logs")
+      .insert({
+        user_id: user.id,
+        opportunity_id: opt?.id ?? null,
+        action_type: "INGEST",
+        description: ingestDescription,
+      });
+
+    if (auditIngestError) {
+      console.error("[AUDIT_LOG_INGEST_FAILURE]", {
+        message: auditIngestError.message,
+        opportunityId: opt?.id,
+      });
+    }
+
+    if (aiInsights) {
+      const { error: auditAiError } = await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        opportunity_id: opt?.id ?? null,
+        action_type: "AI_ANALYSIS",
+        description: `AI recommended stage trajectory: "${aiInsights.suggestedStage}" with a confidence metric of ${(aiInsights.confidenceScore * 100).toFixed(0)}%. Next step: ${aiInsights.nextStepAction}`,
+      });
+
+      if (auditAiError) {
+        console.error("[AUDIT_LOG_AI_ANALYSIS_FAILURE]", {
+          message: auditAiError.message,
+          opportunityId: opt?.id,
+        });
+      }
+    }
   } catch (error: unknown) {
     console.error("[LEAD_CREATION_FAILURE]", { error });
     throw new Error("Failed to create opportunity entry.");
@@ -96,6 +136,17 @@ export async function updateOpportunityStage(
   }
 
   try {
+    const { data: currentOpt, error: fetchError } = await supabase
+      .from("opportunities")
+      .select("title, stage")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError) {
+      console.error("[LEAD_STAGE_PREFETCH]", { message: fetchError.message });
+    }
+
     const { error } = await supabase
       .from("opportunities")
       .update({
@@ -106,6 +157,23 @@ export async function updateOpportunityStage(
       .eq("user_id", user.id);
 
     if (error) throw error;
+
+    const priorStageLabel =
+      typeof currentOpt?.stage === "string" ? currentOpt.stage : "UNKNOWN";
+
+    const { error: auditError } = await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      opportunity_id: id,
+      action_type: "STAGE_TRANSITION",
+      description: `Evolved "${currentOpt?.title ?? "Opportunity"}" stage matrix from ${priorStageLabel} to ${targetStage}.`,
+    });
+
+    if (auditError) {
+      console.error("[AUDIT_LOG_STAGE_FAILURE]", {
+        message: auditError.message,
+        opportunityId: id,
+      });
+    }
   } catch (error: unknown) {
     console.error("[LEAD_STAGE_UPDATE_FAILURE]", { error });
     throw new Error("Failed to transition opportunity pipeline stage.");

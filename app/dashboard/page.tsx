@@ -5,9 +5,15 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+interface AuditLogRow {
+  id: string;
+  action_type: string;
+  description: string;
+  created_at: string;
+}
+
 type OpportunityRow = {
   id: string;
-  user_id: string;
   estimated_value: number | string | null;
   stage: string | null;
 };
@@ -18,7 +24,6 @@ type StatCard = {
   name: string;
   value: string;
   change: string;
-  changeType: "positive" | "negative";
 };
 
 type PipelineGroup = {
@@ -39,7 +44,6 @@ function toEstimatedNumber(value: unknown): number {
   return 0;
 }
 
-/** Maps canonical `DealStage` values to the three dashboard financial columns. */
 function mapStageToPipelineBucket(stage: DealStage): PipelineBucketKey {
   switch (stage) {
     case "INTAKE":
@@ -114,7 +118,7 @@ export default async function DashboardPage() {
   try {
     const { data, error: queryError } = await supabase
       .from("opportunities")
-      .select("id, user_id, estimated_value, stage")
+      .select("id, estimated_value, stage")
       .eq("user_id", user.id);
 
     if (queryError) {
@@ -123,6 +127,26 @@ export default async function DashboardPage() {
     opportunities = (data ?? []) as OpportunityRow[];
   } catch (error: unknown) {
     console.error("[DASHBOARD_PIPELINE_QUERY_FAILURE]", { error });
+  }
+
+  let auditLogs: AuditLogRow[] = [];
+  try {
+    const { data, error: auditQueryError } = await supabase
+      .from("audit_logs")
+      .select("id, action_type, description, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (auditQueryError) {
+      console.error("[DASHBOARD_AUDIT_QUERY_FAILURE]", {
+        message: auditQueryError.message,
+      });
+    } else {
+      auditLogs = (data ?? []) as AuditLogRow[];
+    }
+  } catch (error: unknown) {
+    console.error("[DASHBOARD_AUDIT_QUERY_EXCEPTION]", { error });
   }
 
   const activeCount = opportunities.length;
@@ -142,13 +166,11 @@ export default async function DashboardPage() {
       name: "Active Opportunities",
       value: activeCount.toString(),
       change: "Live Matrix",
-      changeType: "positive",
     },
     {
       name: "Conversion Win Rate",
       value: `${winRate}%`,
-      change: "Closed Deals",
-      changeType: "positive",
+      change: "Closed/Closing",
     },
     {
       name: "Total Pipeline Value",
@@ -156,7 +178,6 @@ export default async function DashboardPage() {
         minimumFractionDigits: 2,
       })}`,
       change: "Gross Equity",
-      changeType: "positive",
     },
   ];
 
@@ -178,7 +199,7 @@ export default async function DashboardPage() {
       color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
     },
     {
-      stage: "Closed Won",
+      stage: "Closed Won / Closing Room",
       count: won.count,
       value: `$${won.value.toLocaleString(undefined, {
         minimumFractionDigits: 2,
@@ -263,11 +284,10 @@ export default async function DashboardPage() {
           </h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             {pipelineSummary.map((group) => {
-              const safeDenominator = activeCount > 0 ? activeCount : 1;
-              const percentage = Math.min(
-                100,
-                Math.max(0, (group.count / safeDenominator) * 100),
-              );
+              const percentage =
+                activeCount > 0
+                  ? Math.min(100, (group.count / activeCount) * 100)
+                  : 0;
 
               return (
                 <div
@@ -301,23 +321,44 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {activeCount === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 bg-slate-800/20 p-12 text-center">
-            <h3 className="text-sm font-semibold text-slate-200">
-              No active workflows initiated
-            </h3>
-            <p className="mx-auto mt-1 mb-4 max-w-sm text-xs text-slate-400">
-              Get started by adding a pipeline lead or synchronizing an AI
-              communication flow to populate live diagnostic activities.
-            </p>
-            <Link
-              href="/dashboard/leads"
-              className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-600"
-            >
-              Open Lead Matrix
-            </Link>
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-white">
+            System Activity Ledger
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-800/40 backdrop-blur-sm">
+            {auditLogs.length === 0 ? (
+              <div className="rounded-xl border border-slate-800 p-8 text-center text-xs text-slate-500">
+                Zero system activities recorded. Mutate lead records to populate
+                logs.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-800 font-mono text-xs">
+                {auditLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex flex-col justify-between gap-2 p-4 transition-colors hover:bg-slate-800/30 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <span
+                        className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                          log.action_type === "INGEST"
+                            ? "border border-blue-500/20 bg-blue-500/10 text-blue-400"
+                            : "border border-purple-500/20 bg-purple-500/10 text-purple-400"
+                        }`}
+                      >
+                        {log.action_type}
+                      </span>
+                      <p className="text-slate-300">{log.description}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] text-slate-500">
+                      {new Date(log.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : null}
+        </div>
       </main>
     </div>
   );

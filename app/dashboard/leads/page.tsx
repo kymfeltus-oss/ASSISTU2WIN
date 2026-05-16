@@ -1,3 +1,4 @@
+import { parseStoredAiInsights } from "@/lib/ai-engine";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { createOpportunity, updateOpportunityStage } from "./actions";
@@ -13,6 +14,7 @@ type OpportunityRow = {
   stage: string;
   notes: string | null;
   created_at: string;
+  ai_insights?: unknown;
 };
 
 export default async function LeadsPage() {
@@ -132,7 +134,9 @@ export default async function LeadsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {opportunities.map((item) => (
+                {opportunities.map((item) => {
+                  const aiInsights = parseStoredAiInsights(item.ai_insights);
+                  return (
                   <div
                     key={item.id}
                     className="flex flex-col justify-between gap-3 rounded-xl border border-slate-700 bg-slate-800 p-5 shadow-sm"
@@ -223,6 +227,34 @@ export default async function LeadsPage() {
                           </form>
                         ) : null}
                       </div>
+
+                      {aiInsights ? (
+                        <div className="mt-3 space-y-1.5 rounded-lg border border-blue-500/10 bg-blue-500/5 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold tracking-wider text-blue-400 uppercase">
+                              AI Copilot Analysis
+                            </span>
+                            <span className="font-mono text-[10px] text-slate-400">
+                              Confidence:{" "}
+                              <span className="font-bold text-emerald-400">
+                                {(aiInsights.confidenceScore * 100).toFixed(0)}%
+                              </span>
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300">
+                            <span className="font-semibold text-slate-400">
+                              Next Action:
+                            </span>{" "}
+                            {aiInsights.nextStepAction}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            <span className="font-semibold text-slate-500">
+                              Predicted Trajectory:
+                            </span>{" "}
+                            {aiInsights.suggestedStage}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="flex items-center justify-between border-t border-slate-700/60 pt-3">
                       <span className="font-mono text-[10px] text-slate-500">
@@ -238,7 +270,8 @@ export default async function LeadsPage() {
                       </span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
