@@ -57,7 +57,7 @@ type QuickAction = {
 
 export const DASHBOARD_BOTTOM_NAV: readonly BottomNavItem[] = [
   { label: "Home", href: "/dashboard", icon: "home", match: "exact" },
-  { label: "Leads", href: LEADS_ROOT, icon: "leads", match: "leads" },
+  { label: "Leads", href: ANALYTICS_ROOT, icon: "leads", match: "leads" },
   { label: "Pipeline", href: PIPELINE_ROOT, icon: "pipeline", match: "prefix" },
   { label: "Analytics", href: ANALYTICS_ROOT, icon: "analytics", match: "prefix" },
 ] as const;
@@ -189,7 +189,7 @@ export function AppRail({ pathname }: { readonly pathname: string }) {
           const active = isNavActive(pathname, item);
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                 active
@@ -249,7 +249,7 @@ export function BottomAppNav({ pathname }: { readonly pathname: string }) {
           const active = isNavActive(pathname, item);
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={`flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-semibold transition active:scale-95 sm:px-2 ${
                 active ? "text-[#00F2FE]" : "text-[#94A3B8]"
