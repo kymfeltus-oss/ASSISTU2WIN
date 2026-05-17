@@ -82,8 +82,11 @@ jobs:
           echo "Server failed to start"
           exit 1
 
-      - name: API certification (Pass 2)
-        run: node scripts/certify-go-live.mjs
+      - name: Reset fixtures before UI (API cert may set rows live)
+        run: node scripts/backfill-go-live-fixtures.mjs
 
       - name: UI certification (Playwright)
         run: node scripts/ui-cert-go-live.mjs
+
+      - name: API certification (Pass 2)
+        run: node scripts/certify-go-live.mjs
