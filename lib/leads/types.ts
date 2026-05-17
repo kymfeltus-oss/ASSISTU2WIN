@@ -26,6 +26,9 @@ export type LeadExtractedPreferences = {
   readonly min_bedrooms: number | null;
   readonly pre_approval_status: string | null;
   readonly loan_type: LoanType;
+  readonly hurdle_lender: boolean;
+  readonly hurdle_home_sale: boolean;
+  readonly hurdle_down_payment: boolean;
 };
 
 export type LeadRecord = {
@@ -39,6 +42,14 @@ export type LeadRecord = {
   readonly raw_transcript: string | null;
   readonly ai_summary: string | null;
   readonly ai_extracted_preferences: LeadExtractedPreferences;
+  /** Potential Buyer Index (0–100 display; stored as market_readiness_score). */
+  readonly market_readiness_score: number;
+  readonly is_first_time_buyer: boolean;
+  readonly has_verified_pre_approval: boolean;
+  readonly purchase_timeline: string;
+  readonly buyer_engagement_count: number;
+  readonly ai_next_best_action: string | null;
+  readonly target_timeline: string | null;
   readonly is_ai_parsed: boolean;
   readonly created_at: string;
   readonly updated_at: string;
@@ -82,6 +93,9 @@ export function parseLeadPreferences(raw: unknown): LeadExtractedPreferences {
       min_bedrooms: null,
       pre_approval_status: null,
       loan_type: "Unknown",
+      hurdle_lender: false,
+      hurdle_home_sale: false,
+      hurdle_down_payment: false,
     };
   }
   const record = raw as Record<string, unknown>;
@@ -105,6 +119,9 @@ export function parseLeadPreferences(raw: unknown): LeadExtractedPreferences {
     min_bedrooms: minBedrooms,
     pre_approval_status: preApproval,
     loan_type: parseLoanType(record.loan_type),
+    hurdle_lender: record.hurdle_lender === true,
+    hurdle_home_sale: record.hurdle_home_sale === true,
+    hurdle_down_payment: record.hurdle_down_payment === true,
   };
 }
 
@@ -136,6 +153,28 @@ export function coerceLeadRow(row: Record<string, unknown>): LeadRecord {
           columnLoanType !== "Unknown" ? columnLoanType : preferences.loan_type,
       };
     })(),
+    market_readiness_score:
+      typeof row.market_readiness_score === "number" &&
+      Number.isFinite(row.market_readiness_score)
+        ? Math.max(0, Math.min(100, Math.floor(row.market_readiness_score)))
+        : 0,
+    is_first_time_buyer: row.is_first_time_buyer === true,
+    has_verified_pre_approval: row.has_verified_pre_approval === true,
+    purchase_timeline:
+      typeof row.purchase_timeline === "string" && row.purchase_timeline.trim().length > 0
+        ? row.purchase_timeline.trim()
+        : "1-3 Months",
+    buyer_engagement_count:
+      typeof row.buyer_engagement_count === "number" &&
+      Number.isFinite(row.buyer_engagement_count)
+        ? Math.max(0, Math.floor(row.buyer_engagement_count))
+        : 0,
+    ai_next_best_action:
+      typeof row.ai_next_best_action === "string"
+        ? row.ai_next_best_action
+        : null,
+    target_timeline:
+      typeof row.target_timeline === "string" ? row.target_timeline : null,
     is_ai_parsed: row.is_ai_parsed === true,
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),

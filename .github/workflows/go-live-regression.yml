@@ -1,0 +1,88 @@
+name: Go Live regression
+
+on:
+  pull_request:
+    paths:
+      - "app/api/appointments/go-live/**"
+      - "app/dashboard/leads/**"
+      - "components/dashboard/ActionCenter.tsx"
+      - "components/dashboard/LiveMeetingBadge.tsx"
+      - "scripts/certify-go-live.mjs"
+      - "scripts/ui-cert-go-live.mjs"
+      - "scripts/backfill-go-live-fixtures.mjs"
+      - "scripts/lib/**"
+      - ".github/workflows/go-live-regression.yml"
+      - "package.json"
+      - "package-lock.json"
+
+concurrency:
+  group: go-live-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-live-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+      GO_LIVE_CERT_EMAIL: ${{ secrets.GO_LIVE_CERT_EMAIL }}
+      GO_LIVE_CERT_PASSWORD: ${{ secrets.GO_LIVE_CERT_PASSWORD }}
+      GO_LIVE_FORBIDDEN_APPOINTMENT_ID: cdc0a18e-b8de-4266-895c-5f6fea9614de
+      GO_LIVE_CERT_BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Validate required secrets
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$LIVEKIT_API_KEY"
+          test -n "$LIVEKIT_API_SECRET"
+          test -n "$GO_LIVE_CERT_EMAIL"
+          test -n "$GO_LIVE_CERT_PASSWORD"
+
+      - name: Backfill go-live fixtures
+        run: node scripts/backfill-go-live-fixtures.mjs
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npx next start -H 127.0.0.1 -p 3000 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000/login > /dev/null; then
+              echo "Server ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: API certification (Pass 2)
+        run: node scripts/certify-go-live.mjs
+
+      - name: UI certification (Playwright)
+        run: node scripts/ui-cert-go-live.mjs
