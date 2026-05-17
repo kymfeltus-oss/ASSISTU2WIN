@@ -1,0 +1,74 @@
+---
+description: Native app-screen design — full shell, rails, midnight/cyan panels, operational density; not website layouts
+globs: app/**/*.tsx, components/**/*.tsx
+alwaysApply: true
+---
+
+# AssistU2Win — App Screen Design (not website pages)
+
+Every Assist U2 Win screen must feel like a **native, full-screen operating app** — an AI-powered real estate command center — not a marketing site, landing page, or generic CRM dashboard.
+
+For **dashboard and in-app workspace screens**, this rule overrides generic “website dashboard” or slate/emerald marketing defaults in other rules; page-level ombre backgrounds still follow `assistu2win-midnight-ombre-canvas.mdc`.
+
+## Product feel
+
+| Target | Avoid |
+|--------|--------|
+| AI-powered real estate operating system | Marketing website |
+| Dense, operational command UI | Hero sections, brochure spacing |
+| Card-based app panels | Generic multi-column website dashboards |
+| Real data + premium empty states | Fake seed/demo database rows |
+
+## Global shell (required on app screens)
+
+- **Full-screen app shell** with `min-h-dvh`, `overflow-x-hidden` — no horizontal scroll.
+- **Compact operational spacing** — tight section gaps; no landing-page vertical padding.
+- **Desktop (lg+):** sticky **left app rail** (~240px) + center workspace + optional right panel (e.g. AI assistant).
+- **Mobile / tablet:** single column; **fixed bottom nav** with safe bottom padding on main content (`pb-28` or equivalent).
+- Reuse shared primitives from `@/components/dashboard/AgentCommandShell` when building dashboard-family screens (`APP_SHELL_BG`, `APP_GRID`, `PAGE_CONTAINER`, `AppRail`, `BottomAppNav`, `CARD_NORMAL`, `CARD_FEATURED`, `PANEL`).
+
+Responsive breakpoints: **mobile → tablet (md) → laptop/desktop (lg+)**. Use `min-w-0` on grid children so content does not force overflow.
+
+## Layout anti-patterns
+
+- No landing-page hero blocks (`text-4xl` headlines, marketing subcopy, full-viewport empty space).
+- No generic website dashboard chrome (wide marketing nav, brochure sidebars, telemetry-style “matrix” pages unless explicitly scoped).
+- No uncontrolled cyan glow; use **controlled** edge glow on featured panels only (see `CARD_FEATURED` in `AgentCommandShell`).
+- Do not scatter one-off shell layouts per page — extend the shared shell pattern.
+
+## Color system (app chrome & panels)
+
+Use these for **shell surfaces, panels, borders, and text** on app screens (complements `assistu2win-midnight-ombre-canvas` for page-level ombre backgrounds in `app/globals.css`):
+
+| Role | Hex |
+|------|-----|
+| Background | `#080C1A`, `#0B1020`, `#050713` |
+| Panels | `#111827`, `#161C31` |
+| Borders | `#1E2A44` |
+| Accent | `#00F2FE` |
+| Muted text | `#94A3B8` |
+| Primary text | `#F8FAFC` |
+
+Prefer exporting repeated class strings from `AgentCommandShell` (or shared tokens) over duplicating long Tailwind hex strings across files.
+
+## Data & empty states
+
+- **Use real data** from existing hooks, server components, and Supabase-backed flows where available.
+- When data is unavailable, show **premium empty states** (clear label, one action, muted helper line) — never insert fake database rows or mock buyer lists.
+- Loading: inline skeletons or compact spinners inside panels — not full-page marketing loaders.
+
+## Route awareness
+
+- Leads analytics app screen: **`/dashboard/leads/analytics`** (`AnalyticsStudioView`).
+- Do not treat **`/dashboard/analytics`** (legacy telemetry page) as the target for new app-shell analytics work unless explicitly requested.
+
+## Hard boundaries (do not change unless user asks)
+
+- APIs, auth flows, Supabase schema/migrations, RLS, `proxy.ts`, and **intake pages**.
+- Follow `assistu2win-core.mdc` for real-estate terminology and forbidden B2B vocabulary on user-facing copy.
+
+## Reference implementation
+
+- Home command: `app/dashboard/page.tsx`
+- Shared shell: `components/dashboard/AgentCommandShell.tsx`
+- Analytics app screen: `components/leads/analytics/AnalyticsStudioView.tsx` + `app/dashboard/leads/analytics/page.tsx`

@@ -1,6 +1,5 @@
 import { AmbientWorkspace } from "@/components/leads/spatial/AmbientWorkspace";
 import { LeadsProvider } from "@/components/leads/LeadsProvider";
-import { LeadsWorkspaceNav } from "@/components/leads/spatial/LeadsWorkspaceNav";
 import { getAdminSession } from "@/lib/auth/admin";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -50,10 +49,7 @@ export default async function LeadsLayout({
 
   return (
     <LeadsProvider>
-      <AmbientWorkspace>
-        <LeadsWorkspaceNav />
-        {children}
-      </AmbientWorkspace>
+      <AmbientWorkspace>{children}</AmbientWorkspace>
     </LeadsProvider>
   );
 }

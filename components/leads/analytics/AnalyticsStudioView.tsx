@@ -1,14 +1,20 @@
-"use client";
+﻿"use client";
 
-import { LeadAnalysisView } from "@/app/dashboard/leads/LeadAnalysisView";
+import {
+  LeadAnalysisReportAssistant,
+  LeadAnalysisWorkspace,
+  useLeadAnalysisMetrics,
+} from "@/app/dashboard/leads/LeadAnalysisView";
+import { APP_MAIN_GRID, MUTED } from "@/components/dashboard/AgentCommandShell";
 import { useLeads } from "@/components/leads/LeadsProvider";
-import { spatial } from "@/components/leads/spatial/spatial-styles";
 import { useState } from "react";
 
 export function AnalyticsStudioView() {
   const { leads, loading } = useLeads();
   const [selectedZipCode, setSelectedZipCode] = useState("75024");
   const [generatedReportLink, setGeneratedReportLink] = useState<string | null>(null);
+
+  const metrics = useLeadAnalysisMetrics(leads);
 
   const handleGenerateReport = () => {
     const zip = selectedZipCode.trim() || "75024";
@@ -17,32 +23,52 @@ export function AnalyticsStudioView() {
     );
   };
 
+  const reportProps = {
+    metrics,
+    leads,
+    selectedZipCode,
+    onZipCodeChange: setSelectedZipCode,
+    generatedReportLink,
+    onGenerateReport: handleGenerateReport,
+  };
+
   if (loading) {
-    return (
-      <p className="px-8 py-16 text-sm text-[var(--spatial-text-secondary)]">
-        Preparing analytics…
-      </p>
-    );
+    return <p className={`py-6 text-sm ${MUTED}`}>Preparing analytics...</p>;
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 pb-24 sm:px-8">
-      <section className="mb-10 space-y-3 pt-2">
-        <p className={spatial.label}>Revenue intelligence</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          How do I make more money?
-        </h1>
-        <p className={`max-w-2xl ${spatial.body}`}>
-          Strategic, editorial analytics — separate from your daily command center.
-        </p>
-      </section>
-      <LeadAnalysisView
-        leads={leads}
-        selectedZipCode={selectedZipCode}
-        onZipCodeChange={setSelectedZipCode}
-        generatedReportLink={generatedReportLink}
-        onGenerateReport={handleGenerateReport}
-      />
+    <div className="analytics-app-print min-w-0">
+      <div className={APP_MAIN_GRID}>
+        <main className="min-w-0">
+          <div className="flex min-w-0 flex-col gap-2">
+            <header className="flex min-w-0 items-center justify-between gap-2 border-b border-[#1E2A44] pb-2">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold tracking-[0.2em] text-[#00F2FE]/80 uppercase">
+                  Analytics
+                </p>
+                <h1 className="truncate text-base font-bold tracking-tight text-[#F8FAFC] sm:text-lg">
+                  Executive command
+                </h1>
+              </div>
+              <span
+                className={`shrink-0 rounded-lg border border-[#1E2A44] bg-[#111827]/80 px-2 py-1 text-[10px] font-semibold ${MUTED}`}
+              >
+                {metrics.totalLeadsCount} buyers
+              </span>
+            </header>
+
+            <div className="lg:hidden print:hidden">
+              <LeadAnalysisReportAssistant {...reportProps} compact />
+            </div>
+
+            <LeadAnalysisWorkspace metrics={metrics} />
+          </div>
+        </main>
+
+        <div className="hidden min-w-0 lg:block">
+          <LeadAnalysisReportAssistant {...reportProps} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,13 +6,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/dashboard/leads", label: "Command" },
+  { href: "/dashboard/leads", label: "Directory" },
+  { href: "/dashboard/leads/command", label: "Command" },
   { href: "/dashboard/leads/pipeline", label: "Pipeline" },
   { href: "/dashboard/leads/analytics", label: "Analytics" },
 ] as const;
 
 export function LeadsWorkspaceNav() {
   const pathname = usePathname();
+
+  if (pathname === "/dashboard/leads" || pathname.startsWith("/dashboard/leads/analytics")) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-30 px-4 pt-5 pb-3 sm:px-8">
@@ -31,9 +36,10 @@ export function LeadsWorkspaceNav() {
           {NAV_ITEMS.map((item) => {
             const isActive =
               item.href === "/dashboard/leads"
-                ? pathname === "/dashboard/leads" ||
-                  pathname === "/dashboard/leads/intake"
-                : pathname.startsWith(item.href);
+                ? pathname === "/dashboard/leads"
+                : item.href === "/dashboard/leads/command"
+                  ? pathname === "/dashboard/leads/command"
+                  : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}

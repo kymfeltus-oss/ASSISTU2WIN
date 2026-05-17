@@ -1,0 +1,107 @@
+---
+description: Shared dashboard primitives — one component system; no per-page Tailwind card/nav duplication
+globs: app/dashboard/**/*.tsx, components/dashboard/**/*.tsx, components/leads/**/*.tsx
+alwaysApply: true
+---
+
+# AssistU2Win — App Component System
+
+All **dashboard / in-app** screens must compose UI from the **shared app primitive layer**, not page-local card systems or copy-pasted Tailwind chains. The product should feel like **one operating system** across Home, Buyers, Pipeline, Analytics, and future modules.
+
+Pair with `assistu2win-app-design.mdc` (shell layout, colors, density) and `assistu2win-midnight-ombre-canvas.mdc` (page background tokens only).
+
+## Canonical import
+
+```ts
+import {
+  APP_SHELL_BG,
+  APP_GRID,
+  PAGE_CONTAINER,
+  CARD_NORMAL,
+  CARD_FEATURED,
+  PANEL,
+  SECTION_HEADING,
+  AppRail,
+  BottomAppNav,
+  SectionTitle,
+} from "@/components/dashboard/AgentCommandShell";
+```
+
+Extract new primitives into `components/dashboard/` (or `components/app/` if split later) **before** adding them inline on a page.
+
+## Preferred primitives
+
+| Primitive | Role | Status / location |
+|-----------|------|-------------------|
+| **AgentCommandShell** | Shell tokens + rail + bottom nav + section title | `components/dashboard/AgentCommandShell.tsx` |
+| **AppRail** | Sticky left nav (desktop) | Export from `AgentCommandShell` |
+| **AppBottomNav** | Fixed bottom nav (mobile/tablet) | Use `BottomAppNav` export today; alias/rename to `AppBottomNav` when consolidating |
+| **AppPanel** | Standard content panel (`CARD_NORMAL` / `PANEL`) | Use `PANEL` or `CARD_NORMAL` until `AppPanel` component exists |
+| **FeaturedPanel** | Accent-edge featured card | Use `CARD_FEATURED` until `FeaturedPanel` exists |
+| **AppSectionHeader** | Uppercase section label row | Use `SectionTitle` / `SECTION_HEADING` until renamed |
+| **KpiCard** | Compact metric tile | Extract to shared component; do not redefine per page |
+| **AnalyticsPanel** | Analytics workspace section wrapper | Extract; compose from `AppPanel` + `AppSectionHeader` |
+| **AiAssistantPanel** | Right-rail AI / insights column | Extract from dashboard/analytics; one implementation |
+| **CommandActionBar** | Primary row actions (filters, CTAs) | Extract; shared height, gap, and touch targets |
+| **EmptyStatePanel** | Premium empty state (label + action) | Extract; no fake data |
+| **ReadinessBar** | Buyer readiness / score bar | Shared meter styles |
+| **PipelineBar** | Stage / funnel progress bar | Shared meter styles |
+| **RiskPill** | Risk / friction badge | Shared pill radius, border, muted variants |
+| **StatusPill** | Lead status badge | Shared pill system with `RiskPill` |
+
+When a primitive is missing, **add it to the shared layer first**, then consume it from pages — never fork a second version on a route.
+
+## Shared design tokens (do not duplicate)
+
+All primitives must draw from the same scale:
+
+| Token | Source |
+|-------|--------|
+| Spacing | `PAGE_CONTAINER` padding; `APP_GRID` / `SECTION_GRID` gaps; panel `p-4 sm:p-5` |
+| Panel radius | `rounded-2xl` on cards/panels |
+| Borders | `border-[#1E2A44]` |
+| Shadows | Card shadow on `CARD_NORMAL`; controlled cyan edge on `CARD_FEATURED` only |
+| Typography | `SECTION_HEADING` for labels; `#F8FAFC` primary, `#94A3B8` muted |
+| Touch targets | `TOUCH_TARGET` (`min-h-11 min-w-11`) on interactive controls |
+| Glow | **Featured panels only** — no random `shadow-cyan` on every card |
+
+## Requirements
+
+- **Avoid duplicated Tailwind chains** — if a class string appears on two screens, promote it to a primitive or exported constant.
+- **Avoid page-specific card systems** — no new `PANEL_SHELL`, `CARD_*`, or slate marketing cards on dashboard routes.
+- **Avoid inconsistent spacing** — use the shell grid; no one-off `py-24`, `max-w-7xl` marketing containers on app screens.
+- **Avoid inconsistent glow intensity** — featured accent glow only via `CARD_FEATURED` / `FeaturedPanel`.
+- **Avoid multiple navigation systems** — one `AppRail` + one `AppBottomNav` per screen; hide legacy workspace nav on routes that use the app shell (see `LeadsWorkspaceNav`).
+- **Use real data** in KPI/analytics primitives; **premium empty states** via `EmptyStatePanel` when empty.
+
+## Anti-patterns
+
+```tsx
+// BAD — page-local shell duplicate
+const CARD_NORMAL = "bg-[#111827]/80 border ...";
+function AppRail() { ... }
+
+// GOOD — import shared primitive
+import { CARD_NORMAL, AppRail } from "@/components/dashboard/AgentCommandShell";
+```
+
+- Importing marketing layout from `/dashboard/analytics` (legacy telemetry) for new modules.
+- Inline `bg-slate-800` / `border-slate-700` website dashboards on app routes.
+- Second bottom nav or duplicate `SectionTitle` in the same route tree.
+
+## Consolidation order (when touching a screen)
+
+1. Replace inline shell/nav with `AgentCommandShell` exports.
+2. Replace local cards with `AppPanel` / `FeaturedPanel` (or token constants).
+3. Extract any remaining one-off UI into the primitive table above.
+4. Delete dead duplicate components from the page file.
+
+## Hard boundaries
+
+Do not change APIs, auth, Supabase schema/RLS, `proxy.ts`, or intake pages unless explicitly requested.
+
+## Reference consumers
+
+- `app/dashboard/page.tsx` — migrate duplicates → shared shell (target state)
+- `components/leads/analytics/AnalyticsStudioView.tsx` — uses `AgentCommandShell`
+- `app/dashboard/leads/LeadAnalysisView.tsx` — uses shell tokens; extract pills/bars to shared primitives when added

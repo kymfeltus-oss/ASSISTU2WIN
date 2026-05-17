@@ -1,401 +1,1191 @@
-import { AppBrand } from "@/components/AppBrand";
-import { createClient } from "@/lib/supabase/server";
-import { type DealStage, parseDealStage } from "@/lib/deal-stage";
+﻿"use client";
+
+import { LeadsProvider, useLeads } from "@/components/leads/LeadsProvider";
+import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
+import {
+  buildAiActions,
+  formatLeadBudget,
+  getFollowUpLeads,
+  getHotBuyers,
+  getLeadAreaLabel,
+  getTotalPipelineVolume,
+  isHotBuyer,
+  type LeadInsightAction,
+} from "@/lib/leads/lead-insights";
+import { getPotentialHudTier } from "@/lib/leads/potential-index";
+import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
+import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import {
+  APP_MAIN_GRID,
+  MUTED,
+  SECTION_HEADING,
+} from "@/components/dashboard/AgentCommandShell";
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
-export const dynamic = "force-dynamic";
+/* Leads OS — primary dashboard home (/dashboard) */
 
-interface AuditLogRow {
-  id: string;
-  action_type: string;
-  description: string;
-  created_at: string;
-}
-
-type OpportunityRow = {
-  id: string;
-  estimated_value: number | string | null;
-  stage: string | null;
+type QuickStat = { readonly label: string; readonly value: string };
+type QuickAction = {
+  readonly label: string;
+  readonly href: string;
+  readonly icon: "intake" | "score" | "follow" | "lender";
+};
+type CommandInsights = {
+  readonly nextAction: string | null;
+  readonly conversionWarning: string | null;
+  readonly recommendedFollowUp: string | null;
+};
+type PipelineStage = {
+  readonly label: string;
+  readonly count: number;
+  readonly volume: string;
 };
 
-type PipelineBucketKey = "intake" | "progress" | "won";
+const QUICK_ACTIONS: readonly QuickAction[] = [
+  { label: "Intake", href: "/dashboard/leads/intake", icon: "intake" },
+  { label: "Score", href: "/dashboard/leads/analytics", icon: "score" },
+  { label: "Follow Up", href: "/dashboard/leads/pipeline", icon: "follow" },
+  { label: "Lender", href: "/dashboard/lender", icon: "lender" },
+] as const;
 
-type StatCard = {
-  name: string;
-  value: string;
-  change: string;
-};
+const CARD_NORMAL =
+  "bg-[#111827]/80 border border-[#1E2A44] rounded-2xl shadow-[0_20px_60px_-35px_rgba(0,0,0,0.85)]";
 
-type PipelineGroup = {
-  stage: string;
-  count: number;
-  value: string;
-  color: string;
-};
+const CARD_FEATURED =
+  "bg-[rgba(22,28,49,0.75)] backdrop-blur-xl border-t-2 border-b border-r border-l-0 border-[#00F2FE] rounded-2xl shadow-[0_-10px_30px_-18px_rgba(0,242,254,0.75),_10px_0_30px_-20px_rgba(0,242,254,0.45),_0_20px_60px_-35px_rgba(0,0,0,0.85)] transition-all duration-300";
 
-function toEstimatedNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const n = Number.parseFloat(value);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+const SECTION_GRID =
+  "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5";
+const TOUCH_TARGET =
+  "min-h-11 min-w-11 touch-manipulation";
+
+function getLeadInitials(name: string): string {
+  const parts = name
+    .split(/[\s&]+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
 }
 
-function mapStageToPipelineBucket(stage: DealStage): PipelineBucketKey {
-  switch (stage) {
-    case "INTAKE":
-      return "intake";
-    case "PRE_APPROVAL":
-    case "HOME_SHOPPING":
-    case "UNDER_CONTRACT":
-      return "progress";
-    case "CLOSING_ROOM":
-      return "won";
-    default: {
-      const _exhaustive: never = stage;
-      return _exhaustive;
-    }
-  }
+function formatPipelineVolume(total: number): string {
+  if (total <= 0) return "-";
+  if (total >= 1_000_000) return `$${(total / 1_000_000).toFixed(1)}M`;
+  return `$${Math.round(total / 1000)}k`;
 }
 
-function resolveDealStage(raw: unknown): DealStage {
-  return parseDealStage(raw) ?? "INTAKE";
+function formatCommissionEstimate(total: number): string {
+  if (total <= 0) return "-";
+  const estimate = total * 0.025;
+  if (estimate >= 1_000_000) return `$${(estimate / 1_000_000).toFixed(1)}M`;
+  if (estimate >= 1000) return `$${Math.round(estimate / 1000)}k`;
+  return `$${Math.round(estimate)}`;
 }
 
-function reducePipelineBuckets(opportunities: readonly OpportunityRow[]) {
-  const buckets: Record<
-    PipelineBucketKey,
-    { count: number; value: number }
-  > = {
-    intake: { count: 0, value: 0 },
-    progress: { count: 0, value: 0 },
-    won: { count: 0, value: 0 },
+function computeAveragePbi(leads: readonly LeadRecord[]): number {
+  if (leads.length === 0) return 0;
+  const sum = leads.reduce((acc, lead) => acc + lead.market_readiness_score, 0);
+  return Math.round(sum / leads.length);
+}
+
+function getActiveLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return leads.filter((lead) => lead.current_status !== "Closed");
+}
+
+function getPriorityLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return [...leads]
+    .sort((a, b) => b.market_readiness_score - a.market_readiness_score)
+    .slice(0, 3);
+}
+
+function getClosingWatchLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return leads
+    .filter((lead) => lead.current_status === "Under Contract")
+    .slice(0, 4);
+}
+
+function getActiveSearchLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return leads
+    .filter((lead) => lead.current_status === "Active Searching")
+    .slice(0, 4);
+}
+
+function getReadyToWriteLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return leads
+    .filter(
+      (lead) =>
+        lead.has_verified_pre_approval && lead.market_readiness_score >= 80,
+    )
+    .slice(0, 3);
+}
+
+function getFinancingFrictionLeads(leads: readonly LeadRecord[]): readonly LeadRecord[] {
+  return leads
+    .filter(
+      (lead) =>
+        !lead.has_verified_pre_approval ||
+        lead.ai_extracted_preferences.hurdle_lender,
+    )
+    .slice(0, 3);
+}
+
+function buildLeadTags(lead: LeadRecord): readonly string[] {
+  const tags: string[] = [];
+  if (lead.has_verified_pre_approval) tags.push("Pre-approved");
+  if (isHotBuyer(lead)) tags.push("Hot");
+  if (lead.ai_extracted_preferences.hurdle_lender) tags.push("Needs lender");
+  if (lead.is_first_time_buyer) tags.push("First-time buyer");
+  if (tags.length === 0) tags.push(lead.current_status);
+  return tags.slice(0, 3);
+}
+
+function buildCommandInsights(leads: readonly LeadRecord[]): CommandInsights {
+  const actions = buildAiActions(leads);
+  const followUps = getFollowUpLeads(leads);
+  const stalled = followUps.find((lead) => !lead.has_verified_pre_approval);
+
+  const nextAction =
+    actions[0] !== undefined
+      ? `${actions[0].leadName}: ${actions[0].label}`
+      : null;
+
+  const conversionWarning = stalled
+    ? `${stalled.lead_name} still needs verified pre-approval — follow up before showings slip.`
+    : null;
+
+  const second = actions[1];
+  const recommendedFollowUp = second
+    ? `${second.leadName}: ${second.label}`
+    : leads[0]?.ai_summary ?? null;
+
+  return { nextAction, conversionWarning, recommendedFollowUp };
+}
+
+function hasAnyInsight(insights: CommandInsights): boolean {
+  return Boolean(
+    insights.nextAction ?? insights.conversionWarning ?? insights.recommendedFollowUp,
+  );
+}
+
+function bucketStatus(status: LeadStatus): "new" | "active" | "closed" {
+  if (status === "New Lead") return "new";
+  if (status === "Closed") return "closed";
+  return "active";
+}
+
+function buildPipelineSnapshot(leads: readonly LeadRecord[]): readonly PipelineStage[] {
+  const totals = {
+    new: { count: 0, value: 0 },
+    active: { count: 0, value: 0 },
+    closed: { count: 0, value: 0 },
   };
 
-  for (const item of opportunities) {
-    const stage = resolveDealStage(item.stage);
-    const bucket = mapStageToPipelineBucket(stage);
-    const value = toEstimatedNumber(item.estimated_value);
-    buckets[bucket].count += 1;
-    buckets[bucket].value += value;
+  for (const lead of leads) {
+    const bucket = bucketStatus(lead.current_status);
+    const budget = lead.target_budget ?? 0;
+    totals[bucket].count += 1;
+    totals[bucket].value += budget;
   }
 
-  return buckets;
+  return [
+    {
+      label: "New leads",
+      count: totals.new.count,
+      volume: formatPipelineVolume(totals.new.value),
+    },
+    {
+      label: "In progress",
+      count: totals.active.count,
+      volume: formatPipelineVolume(totals.active.value),
+    },
+    {
+      label: "Closed",
+      count: totals.closed.count,
+      volume: formatPipelineVolume(totals.closed.value),
+    },
+  ] as const;
 }
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    redirect("/login");
-  }
-
-  let fullName = "Operator";
-  try {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      console.error("[DASHBOARD_PROFILE]", { message: profileError.message });
-    } else if (profile?.full_name && profile.full_name.trim().length > 0) {
-      fullName = profile.full_name.trim();
-    }
-  } catch (error: unknown) {
-    console.error("[DASHBOARD_PROFILE_FAILURE]", { error });
-  }
-
-  let opportunities: OpportunityRow[] = [];
-  try {
-    const { data, error: queryError } = await supabase
-      .from("opportunities")
-      .select("id, estimated_value, stage")
-      .eq("user_id", user.id)
-      .eq("is_archived", false);
-
-    if (queryError) {
-      throw queryError;
-    }
-    opportunities = (data ?? []) as OpportunityRow[];
-  } catch (error: unknown) {
-    console.error("[DASHBOARD_PIPELINE_QUERY_FAILURE]", { error });
-  }
-
-  let auditLogs: AuditLogRow[] = [];
-  try {
-    const { data, error: auditQueryError } = await supabase
-      .from("audit_logs")
-      .select("id, action_type, description, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    if (auditQueryError) {
-      console.error("[DASHBOARD_AUDIT_QUERY_FAILURE]", {
-        message: auditQueryError.message,
-      });
-    } else {
-      auditLogs = (data ?? []) as AuditLogRow[];
-    }
-  } catch (error: unknown) {
-    console.error("[DASHBOARD_AUDIT_QUERY_EXCEPTION]", { error });
-  }
-
-  const activeCount = opportunities.length;
-
-  const totalValue = opportunities.reduce<number>(
-    (acc, curr) => acc + toEstimatedNumber(curr.estimated_value),
-    0,
-  );
-
-  const { intake, progress, won } = reducePipelineBuckets(opportunities);
-
-  const winRate =
-    activeCount > 0 ? ((won.count / activeCount) * 100).toFixed(1) : "0.0";
-
-  const stats: readonly StatCard[] = [
-    {
-      name: "Active Opportunities",
-      value: activeCount.toString(),
-      change: "Live Matrix",
-    },
-    {
-      name: "Conversion Win Rate",
-      value: `${winRate}%`,
-      change: "Closed/Closing",
-    },
-    {
-      name: "Total Pipeline Value",
-      value: `$${totalValue.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`,
-      change: "Gross Equity",
-    },
-  ];
-
-  const pipelineSummary: readonly PipelineGroup[] = [
-    {
-      stage: "Leads & Intake",
-      count: intake.count,
-      value: `$${intake.value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`,
-      color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    },
-    {
-      stage: "In Progress / Negotiation",
-      count: progress.count,
-      value: `$${progress.value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`,
-      color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    },
-    {
-      stage: "Closed Won / Closing Room",
-      count: won.count,
-      value: `$${won.value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`,
-      color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    },
-  ];
+function ScoreRing({
+  score,
+  size = 96,
+  label = "Buyer Readiness",
+  className = "",
+}: {
+  readonly score: number;
+  readonly size?: number;
+  readonly label?: string;
+  readonly className?: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, score));
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (clamped / 100) * circumference;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
-      {/* Upper Navigation Bar */}
-      <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <AppBrand />
-              </div>
-              <div className="flex items-center gap-4 font-mono text-xs">
-                <Link
-                  href="/dashboard"
-                  className="border-b-2 border-blue-500 pb-1.5 pt-1 font-bold text-blue-400"
-                >
-                  Overview
-                </Link>
-                <Link
-                  href="/dashboard/leads"
-                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
-                >
-                  Lead Matrix
-                </Link>
-                <Link
-                  href="/dashboard/analytics"
-                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
-                >
-                  Telemetry
-                </Link>
-                <Link
-                  href="/dashboard/archive"
-                  className="pb-1 text-slate-400 transition-colors hover:text-slate-200"
-                >
-                  Archive
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden text-right sm:block">
-                <p className="text-xs font-medium text-slate-300">{fullName}</p>
-                <p className="text-[10px] text-slate-500">
-                  Authenticated Member
-                </p>
-              </div>
-              <form action="/api/auth/signout" method="POST">
-                <button
-                  type="submit"
-                  className="cursor-pointer rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
-                >
-                  Sign Out
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              Welcome Back, {fullName}
-            </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Here is your live enterprise workspace matrix overview for today.
-            </p>
-          </div>
-          <div className="flex h-fit w-fit flex-col gap-2 sm:flex-row sm:items-center">
-            <Link
-              href="/dashboard/leads"
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
-            >
-              Manage Lead Intake
-            </Link>
-            <Link
-              href="/dashboard/archive"
-              className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-700"
-            >
-              Archived deals
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          {stats.map((item) => (
-            <div
-              key={item.name}
-              className="space-y-2 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-md"
-            >
-              <p className="text-xs font-medium tracking-wider text-slate-400 uppercase">
-                {item.name}
-              </p>
-              <div className="flex items-baseline justify-between">
-                <p className="text-2xl font-semibold tracking-tight text-white">
-                  {item.value}
-                </p>
-                <span className="inline-flex items-center rounded-full bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-300">
-                  {item.change}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-white">
-            Stage Pipeline Health
-          </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {pipelineSummary.map((group) => {
-              const percentage =
-                activeCount > 0
-                  ? Math.min(100, (group.count / activeCount) * 100)
-                  : 0;
-
-              return (
-                <div
-                  key={group.stage}
-                  className="flex flex-col justify-between gap-4 rounded-xl border border-slate-700 bg-slate-800 p-5 shadow-sm"
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-slate-300">
-                        {group.stage}
-                      </h3>
-                      <span
-                        className={`rounded-md border px-2 py-0.5 font-mono text-xs font-medium ${group.color}`}
-                      >
-                        {group.count} deals
-                      </span>
-                    </div>
-                    <p className="mt-3 text-xl font-bold tracking-tight text-white">
-                      {group.value}
-                    </p>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-700">
-                    <div
-                      className="h-full rounded-full bg-blue-500 transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-white">
-            System Activity Ledger
-          </h2>
-          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-800/40 backdrop-blur-sm">
-            {auditLogs.length === 0 ? (
-              <div className="rounded-xl border border-slate-800 p-8 text-center text-xs text-slate-500">
-                Zero system activities recorded. Mutate lead records to populate
-                logs.
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-800 font-mono text-xs">
-                {auditLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex flex-col justify-between gap-2 p-4 transition-colors hover:bg-slate-800/30 sm:flex-row sm:items-center"
-                  >
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <span
-                        className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                          log.action_type === "INGEST"
-                            ? "border border-blue-500/20 bg-blue-500/10 text-blue-400"
-                            : "border border-purple-500/20 bg-purple-500/10 text-purple-400"
-                        }`}
-                      >
-                        {log.action_type}
-                      </span>
-                      <p className="text-slate-300">{log.description}</p>
-                    </div>
-                    <span className="shrink-0 text-[10px] text-slate-500">
-                      {new Date(log.created_at).toLocaleTimeString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
+    <div
+      className={`relative shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden={score === 0}
+    >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#00F2FE"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="drop-shadow-[0_0_8px_rgba(0,242,254,0.35)]"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-bold text-white">{clamped}</span>
+        <span className="text-[8px] font-bold tracking-[0.18em] text-[#00F2FE]/80 uppercase">
+          {label}
+        </span>
+      </div>
     </div>
   );
 }
+
+function IconGlyph({
+  kind,
+  className = "h-5 w-5",
+}: {
+  readonly kind: QuickAction["icon"] | "ai" | "close";
+  readonly className?: string;
+}) {
+  const paths: Record<string, ReactNode> = {
+    intake: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    ),
+    score: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+      />
+    ),
+    follow: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
+      />
+    ),
+    lender: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-6.75 4.5h6.75m-6.75 4.5h6.75m-6.75 4.5h6.75"
+      />
+    ),
+    home: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+      />
+    ),
+    buyers: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+      />
+    ),
+    pipeline: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+      />
+    ),
+    analytics: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+      />
+    ),
+    ai: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
+      />
+    ),
+    close: (
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    ),
+  };
+
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      aria-hidden
+    >
+      {paths[kind]}
+    </svg>
+  );
+}
+
+function EmptyStatePanel({
+  title,
+  body,
+  actionHref,
+  actionLabel,
+}: {
+  readonly title: string;
+  readonly body: string;
+  readonly actionHref?: string;
+  readonly actionLabel?: string;
+}) {
+  return (
+    <div className={`${CARD_NORMAL} min-w-0 p-6 text-center`}>
+      <p className="text-base font-semibold text-white">{title}</p>
+      <p className={`mt-2 text-sm leading-relaxed ${MUTED}`}>{body}</p>
+      {actionHref && actionLabel ? (
+        <Link
+          href={actionHref}
+          className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl border border-[#00F2FE]/40 bg-[rgba(0,242,254,0.08)] px-4 text-xs font-semibold tracking-wide text-[#00F2FE] uppercase transition active:scale-[0.98]"
+        >
+          {actionLabel}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function PriorityLeadCard({ lead }: { readonly lead: LeadRecord }) {
+  const tier = getPotentialHudTier(lead.market_readiness_score);
+  const progress = Math.min(100, Math.max(0, lead.market_readiness_score));
+  const tags = buildLeadTags(lead);
+  const loanType = lead.ai_extracted_preferences.loan_type;
+
+  return (
+    <article className={`${CARD_NORMAL} relative min-w-0 overflow-hidden p-4 transition active:scale-[0.99] sm:p-5`}>
+      <div className="relative flex gap-3">
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#1E2A44] bg-[#0B1020] text-sm font-bold text-[#00F2FE]"
+          aria-hidden
+        >
+          {getLeadInitials(lead.lead_name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-base font-semibold text-white">{lead.lead_name}</h3>
+            <span
+              className={`max-w-full truncate rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase ${tier.className}`}
+            >
+              {tier.label}
+            </span>
+          </div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+            <div>
+              <dt className={`text-[9px] font-semibold tracking-wider uppercase ${MUTED}`}>
+                Max budget
+              </dt>
+              <dd className="font-semibold text-slate-200">
+                {formatLeadBudget(lead.target_budget)}
+              </dd>
+            </div>
+            <div>
+              <dt className={`text-[9px] font-semibold tracking-wider uppercase ${MUTED}`}>
+                Loan type
+              </dt>
+              <dd className="text-slate-300">{loanType}</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className={`text-[9px] font-semibold tracking-wider uppercase ${MUTED}`}>
+                Timeline
+              </dt>
+              <dd className="text-slate-300">{lead.purchase_timeline}</dd>
+            </div>
+          </dl>
+          <div className="mt-3">
+            <div className={`mb-1 flex justify-between text-[9px] font-semibold tracking-wider uppercase ${MUTED}`}>
+              <span>Buyer Readiness</span>
+              <span className="text-[#00F2FE]/90">{progress}%</span>
+            </div>
+            <div className="h-1 overflow-hidden rounded-full bg-[#0B1020]">
+              <div
+                className="h-full rounded-full bg-[#00F2FE] shadow-[0_0_6px_rgba(0,242,254,0.35)]"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-[#1E2A44] bg-[#0B1020] px-2 py-0.5 text-[9px] font-semibold text-slate-400"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function AiInsightsContent({
+  insights,
+  loading,
+  includeFollowUp = false,
+}: {
+  readonly insights: CommandInsights;
+  readonly loading: boolean;
+  readonly includeFollowUp?: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm leading-relaxed ${MUTED}`}>Loading AI recommendations…</p>;
+  }
+
+  if (!hasAnyInsight(insights)) {
+    return (
+      <EmptyStatePanel
+        title="AI Priority Feed empty"
+        body="Lead intelligence will appear here once buyers enter the pipeline and activity is captured."
+        actionHref="/dashboard/leads/intake"
+        actionLabel="Add buyers"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {insights.nextAction ? (
+        <div className={`${CARD_NORMAL} min-w-0 p-4`}>
+          <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.16em] text-[#00F2FE] uppercase">
+            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#00F2FE] shadow-[0_0_6px_rgba(0,242,254,0.5)]" />
+            Next best action
+          </p>
+          <p className="text-sm leading-relaxed break-words text-slate-200">{insights.nextAction}</p>
+        </div>
+      ) : null}
+      {insights.conversionWarning ? (
+        <div className={`${CARD_NORMAL} min-w-0 border-amber-900/50 p-4`}>
+          <p className="mb-1.5 text-[10px] font-bold tracking-[0.16em] text-amber-300/90 uppercase">
+            Conversion Risk
+          </p>
+          <p className="text-sm leading-relaxed break-words text-amber-100/80">
+            {insights.conversionWarning}
+          </p>
+        </div>
+      ) : null}
+      {includeFollowUp && insights.recommendedFollowUp ? (
+        <div className={`${CARD_NORMAL} min-w-0 p-4`}>
+          <p className={`mb-1.5 text-[10px] font-bold tracking-[0.16em] uppercase ${MUTED}`}>
+            Recommended follow-up
+          </p>
+          <p className="text-sm leading-relaxed break-words text-slate-300">
+            {insights.recommendedFollowUp}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AiRecommendationsSection({
+  insights,
+  loading,
+  onOpenDrawer,
+  showOpenButton = true,
+}: {
+  readonly insights: CommandInsights;
+  readonly loading: boolean;
+  readonly onOpenDrawer?: () => void;
+  readonly showOpenButton?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <AiInsightsContent insights={insights} loading={loading} />
+      {showOpenButton && onOpenDrawer ? (
+        <button
+          type="button"
+          onClick={onOpenDrawer}
+          className={`mt-3 w-full rounded-xl border border-[#00F2FE]/30 bg-[rgba(0,242,254,0.06)] py-3 text-xs font-semibold tracking-wide text-[#00F2FE] uppercase transition active:scale-[0.98] ${TOUCH_TARGET}`}
+        >
+          Open AI assistant
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function AiAssistantPanel({
+  insights,
+  loading,
+  titleId,
+}: {
+  readonly insights: CommandInsights;
+  readonly loading: boolean;
+  readonly titleId: string;
+}) {
+  return (
+    <aside
+      className={`${CARD_NORMAL} flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)]`}
+      aria-labelledby={titleId}
+    >
+      <div className="shrink-0 border-b border-[#1E2A44] px-4 py-4 sm:px-5">
+        <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F2FE]/90 uppercase">
+          AI assistant
+        </p>
+        <h2 id={titleId} className="mt-1 text-lg font-semibold text-[#F8FAFC]">
+          Priority feed
+        </h2>
+        <p className={`mt-1 text-xs leading-relaxed ${MUTED}`}>
+          Next moves and conversion risks for your active buyers.
+        </p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5">
+        <AiInsightsContent insights={insights} loading={loading} includeFollowUp />
+      </div>
+    </aside>
+  );
+}
+
+function AiDrawer({
+  open,
+  onClose,
+  titleId,
+  insights,
+  loading,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly titleId: string;
+  readonly insights: CommandInsights;
+  readonly loading: boolean;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Close AI assistant"
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-lg rounded-t-2xl border border-[#1E2A44] border-b-0 bg-[#111827]/95 px-5 pt-3 pb-8 shadow-[0_20px_60px_-35px_rgba(0,0,0,0.85)] backdrop-blur-xl transition-transform duration-300 ease-out lg:hidden ${
+          open ? "translate-y-0" : "translate-y-full"
+        }`}
+        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#1E2A44]" aria-hidden />
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F2FE]/90 uppercase">
+              AI assistant
+            </p>
+            <h2 id={titleId} className="text-lg font-semibold text-white">
+              Your next moves
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1E2A44] bg-[#0B1020] text-slate-300"
+            aria-label="Close drawer"
+          >
+            <IconGlyph kind="close" className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[min(52vh,420px)] overflow-x-hidden overflow-y-auto pr-1">
+          <AiInsightsContent insights={insights} loading={loading} includeFollowUp />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function SectionTitle({
+  title,
+  actionHref,
+  actionLabel,
+}: {
+  readonly title: string;
+  readonly actionHref?: string;
+  readonly actionLabel?: string;
+}) {
+  return (
+    <div className="mb-2.5 flex items-center justify-between gap-2">
+      <h2 className={SECTION_HEADING}>{title}</h2>
+      {actionHref && actionLabel ? (
+        <Link
+          href={actionHref}
+          className="shrink-0 py-1 text-[10px] font-semibold text-[#00F2FE] sm:text-xs"
+        >
+          {actionLabel}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function CompactLeadRow({ lead }: { readonly lead: LeadRecord }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#1E2A44] bg-[#0B1020]/60 px-3 py-2.5">
+      <div
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#1E2A44] bg-[#050713] text-xs font-bold text-[#00F2FE]"
+        aria-hidden
+      >
+        {getLeadInitials(lead.lead_name)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-[#F8FAFC]">{lead.lead_name}</p>
+        <p className={`truncate text-[10px] ${MUTED}`}>{lead.current_status}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-xs font-semibold text-[#F8FAFC]">
+          {formatLeadBudget(lead.target_budget)}
+        </p>
+        <p className="text-[10px] text-[#00F2FE]/80">{lead.market_readiness_score}%</p>
+      </div>
+    </div>
+  );
+}
+
+function TodaysExecutionPanel({
+  actions,
+  loading,
+}: {
+  readonly actions: readonly LeadInsightAction[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading today&apos;s execution list…</p>;
+  }
+  if (actions.length === 0) {
+    return (
+      <EmptyStatePanel
+        title="Execution list clear"
+        body="Next-step actions appear here when buyers need follow-through on your pipeline."
+        actionHref="/dashboard/leads/pipeline"
+        actionLabel="Open pipeline"
+      />
+    );
+  }
+  return (
+    <ul className="space-y-2">
+      {actions.map((action) => (
+        <li
+          key={action.id}
+          className={`${CARD_NORMAL} flex gap-3 p-3`}
+        >
+          <span
+            className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+              action.priority === "high"
+                ? "bg-[#00F2FE] shadow-[0_0_6px_rgba(0,242,254,0.45)]"
+                : "bg-[#94A3B8]"
+            }`}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-[#F8FAFC]">{action.leadName}</p>
+            <p className={`mt-0.5 text-sm leading-relaxed ${MUTED}`}>{action.label}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ClosingWatchPanel({
+  leads,
+  loading,
+}: {
+  readonly leads: readonly LeadRecord[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading closing watch…</p>;
+  }
+  if (leads.length === 0) {
+    return (
+      <EmptyStatePanel
+        title="Closing Watch quiet"
+        body="Under-contract buyers will surface here for milestone tracking."
+        actionHref="/dashboard/leads/pipeline"
+        actionLabel="View pipeline"
+      />
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => (
+        <CompactLeadRow key={lead.id} lead={lead} />
+      ))}
+    </div>
+  );
+}
+
+function ActiveSearchPanel({
+  leads,
+  loading,
+}: {
+  readonly leads: readonly LeadRecord[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading active search…</p>;
+  }
+  if (leads.length === 0) {
+    return (
+      <EmptyStatePanel
+        title="No Active Search buyers"
+        body="Buyers actively touring will appear here once their status moves to Active Search."
+      />
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => (
+        <CompactLeadRow key={lead.id} lead={lead} />
+      ))}
+    </div>
+  );
+}
+
+function MarketOpportunityPanel({
+  leads,
+  loading,
+}: {
+  readonly leads: readonly LeadRecord[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading market signals…</p>;
+  }
+  if (leads.length === 0) {
+    return (
+      <EmptyStatePanel
+        title="No market signals yet"
+        body="High-readiness buyers and target areas will populate as your pipeline grows."
+        actionHref="/dashboard/leads/intake"
+        actionLabel="Add buyers"
+      />
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => (
+        <div
+          key={lead.id}
+          className={`${CARD_NORMAL} flex items-center justify-between gap-3 p-3`}
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[#F8FAFC]">
+              {getLeadAreaLabel(lead)}
+            </p>
+            <p className={`mt-0.5 truncate text-xs ${MUTED}`}>{lead.lead_name}</p>
+          </div>
+          <span className="shrink-0 rounded-md border border-[#00F2FE]/30 bg-[rgba(0,242,254,0.08)] px-2 py-0.5 text-[10px] font-bold text-[#00F2FE]">
+            {lead.market_readiness_score}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FinancingFrictionPanel({
+  leads,
+  loading,
+}: {
+  readonly leads: readonly LeadRecord[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading financing friction…</p>;
+  }
+  if (leads.length === 0) {
+    return (
+      <p className={`rounded-xl border border-[#1E2A44] bg-[#0B1020]/50 px-3 py-2.5 text-xs ${MUTED}`}>
+        No financing friction flagged on active buyers.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => (
+        <div
+          key={lead.id}
+          className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3 py-2.5"
+        >
+          <p className="text-xs font-semibold text-amber-100/90">{lead.lead_name}</p>
+          <p className="mt-0.5 text-[11px] text-amber-200/70">
+            {!lead.has_verified_pre_approval
+              ? "Pre-approval still needed"
+              : "Lender coordination flagged"}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReadyToWritePanel({
+  leads,
+  loading,
+}: {
+  readonly leads: readonly LeadRecord[];
+  readonly loading: boolean;
+}) {
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading ready-to-write buyers…</p>;
+  }
+  if (leads.length === 0) {
+    return (
+      <p className={`rounded-xl border border-[#1E2A44] bg-[#0B1020]/50 px-3 py-2.5 text-xs ${MUTED}`}>
+        No buyers marked Ready to Write yet.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => (
+        <CompactLeadRow key={lead.id} lead={lead} />
+      ))}
+    </div>
+  );
+}
+
+function DashboardLeadsOsScreen() {
+  const drawerTitleId = useId();
+  const desktopAiTitleId = useId();
+  const [aiOpen, setAiOpen] = useState(false);
+  const { leads, loading, statusMessage } = useLeads();
+
+  const closeAi = useCallback(() => setAiOpen(false), []);
+  const openAi = useCallback(() => setAiOpen(true), []);
+
+  const activeLeads = useMemo(() => getActiveLeads(leads), [leads]);
+  const attentionCount = useMemo(() => getFollowUpLeads(leads).length, [leads]);
+  const avgPbi = useMemo(() => computeAveragePbi(activeLeads), [activeLeads]);
+  const pipelineVolume = useMemo(() => getTotalPipelineVolume(activeLeads), [activeLeads]);
+  const priorityLeads = useMemo(() => getPriorityLeads(activeLeads), [activeLeads]);
+  const pipelineSnapshot = useMemo(() => buildPipelineSnapshot(leads), [leads]);
+  const insights = useMemo(() => buildCommandInsights(leads), [leads]);
+  const hasLeads = activeLeads.length > 0;
+
+  const executionActions = useMemo(() => buildAiActions(leads), [leads]);
+  const closingWatchLeads = useMemo(() => getClosingWatchLeads(activeLeads), [activeLeads]);
+  const activeSearchLeads = useMemo(() => getActiveSearchLeads(activeLeads), [activeLeads]);
+  const marketSignalLeads = useMemo(() => getHotBuyers(activeLeads), [activeLeads]);
+  const financingFrictionLeads = useMemo(
+    () => getFinancingFrictionLeads(activeLeads),
+    [activeLeads],
+  );
+  const readyToWriteLeads = useMemo(() => getReadyToWriteLeads(activeLeads), [activeLeads]);
+
+  const quickStats = useMemo((): readonly QuickStat[] => {
+    const potentialCount = getHotBuyers(activeLeads).length;
+    return [
+      { label: "Buyer Readiness", value: hasLeads ? String(avgPbi) : "-" },
+      { label: "Pipeline", value: formatPipelineVolume(pipelineVolume) },
+      { label: "Potential Buyers", value: hasLeads ? String(potentialCount) : "-" },
+      { label: "Commission", value: formatCommissionEstimate(pipelineVolume) },
+    ];
+  }, [activeLeads, avgPbi, hasLeads, pipelineVolume]);
+
+  useEffect(() => {
+    if (!aiOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAi();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [aiOpen, closeAi]);
+
+  return (
+    <>
+      <div className={APP_MAIN_GRID}>
+        <main className="min-w-0">
+            <div className="flex min-h-dvh w-full min-w-0 flex-col">
+          <header className="mb-5 flex items-center gap-3 pt-1 lg:pt-4">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
+            <Image
+              src={BRAND_LOGO_SRC}
+              alt={BRAND_LOGO_ALT}
+              fill
+              className="object-cover"
+              sizes="40px"
+              unoptimized
+            />
+          </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-bold tracking-[0.22em] text-[#00F2FE]/80 uppercase lg:hidden">
+                Assist U2 Win
+              </p>
+              <h1 className="text-lg font-bold tracking-tight text-[#F8FAFC] sm:text-xl lg:text-2xl">
+                Today&apos;s Agent Command
+              </h1>
+              <p className={`mt-1 hidden text-sm md:block ${MUTED}`}>
+                Revenue command board for your active buyer pipeline.
+              </p>
+            </div>
+            <form action="/api/auth/signout" method="POST" className="lg:hidden">
+              <button
+                type="submit"
+                className="rounded-lg border border-[#1E2A44] bg-[#0B1020] px-2.5 py-1.5 text-[10px] font-semibold text-[#94A3B8] transition hover:text-[#F8FAFC]"
+              >
+                Sign out
+              </button>
+            </form>
+          </header>
+
+        {statusMessage ? (
+          <p
+            className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90"
+            role="status"
+          >
+            {statusMessage}
+          </p>
+        ) : null}
+
+          <div className="flex flex-col gap-5 lg:gap-6">
+            <section className={`${CARD_FEATURED} relative overflow-visible p-4 sm:p-5 lg:p-6`}>
+              <p className={`text-[10px] font-semibold tracking-[0.18em] uppercase sm:text-xs ${MUTED}`}>
+                Revenue command board
+              </p>
+              <div className="relative mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+            <div className="min-w-0 flex-1">
+              {loading ? (
+                <p className={`text-sm ${MUTED}`}>Loading active buyers…</p>
+              ) : hasLeads ? (
+                <p className="text-xl font-bold leading-snug text-[#F8FAFC] lg:text-2xl">
+                  <span className="text-[#00F2FE]">{attentionCount}</span>{" "}
+                  {attentionCount === 1 ? "buyer needs" : "buyers need"} your attention.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xl font-bold leading-snug text-[#F8FAFC] lg:text-2xl">
+                    No active buyers yet
+                  </p>
+                  <p className={`mt-2 text-sm leading-relaxed ${MUTED}`}>
+                    Lead intelligence will appear here once buyers enter the pipeline.
+                  </p>
+                </>
+              )}
+            </div>
+                <ScoreRing
+                  score={hasLeads ? avgPbi : 0}
+                  size={72}
+                  label="Buyer Readiness"
+                  className="mx-auto shrink-0 sm:mx-0 md:hidden"
+                />
+                <ScoreRing
+                  score={hasLeads ? avgPbi : 0}
+                  size={88}
+                  label="Buyer Readiness"
+                  className="mx-auto hidden shrink-0 sm:mx-0 md:block"
+                />
+              </div>
+              <div className="relative mt-4 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
+            {quickStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-[#1E2A44] bg-[#0B1020]/80 px-3 py-2.5"
+              >
+                <p className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${MUTED}`}>
+                  {stat.label}
+                </p>
+                <p className="mt-0.5 text-base font-bold text-[#F8FAFC]">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+            </section>
+
+            <div className={SECTION_GRID}>
+              <section className="min-w-0 md:col-span-2">
+                <SectionTitle
+                  title="Priority Buyer List"
+                  actionHref="/dashboard/leads"
+                  actionLabel="All buyers"
+                />
+                {loading ? (
+                  <p className={`text-sm ${MUTED}`}>Loading priority buyers…</p>
+                ) : priorityLeads.length > 0 ? (
+                  <div className="space-y-3">
+                    {priorityLeads.map((lead) => (
+                      <PriorityLeadCard key={lead.id} lead={lead} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyStatePanel
+                    title="Priority list empty"
+                    body="Your highest-readiness buyers will rank here automatically."
+                    actionHref="/dashboard/leads/intake"
+                    actionLabel="Add buyers"
+                  />
+                )}
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle title="Today's Execution List" />
+                <TodaysExecutionPanel actions={executionActions} loading={loading} />
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle
+                  title="Closing Watch"
+                  actionHref="/dashboard/leads/pipeline"
+                  actionLabel="View pipeline"
+                />
+                <ClosingWatchPanel leads={closingWatchLeads} loading={loading} />
+              </section>
+
+              <section className="min-w-0 lg:hidden">
+                <SectionTitle title="AI Priority Feed" />
+                <AiRecommendationsSection
+                  insights={insights}
+                  loading={loading}
+                  onOpenDrawer={openAi}
+                />
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle title="Active Search" />
+                <ActiveSearchPanel leads={activeSearchLeads} loading={loading} />
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle title="Market Opportunity Signals" />
+                <MarketOpportunityPanel leads={marketSignalLeads} loading={loading} />
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle title="Financing Friction" />
+                <FinancingFrictionPanel leads={financingFrictionLeads} loading={loading} />
+              </section>
+
+              <section className="min-w-0">
+                <SectionTitle title="Ready to Write" />
+                <ReadyToWritePanel leads={readyToWriteLeads} loading={loading} />
+              </section>
+              <section className="min-w-0 md:col-span-2">
+                <SectionTitle
+                  title="Pipeline snapshot"
+                  actionHref="/dashboard/leads/pipeline"
+                  actionLabel="View pipeline"
+                />
+                {loading ? (
+                  <p className={`text-sm ${MUTED}`}>Loading pipeline…</p>
+                ) : leads.length === 0 ? (
+                  <EmptyStatePanel
+                    title="Pipeline empty"
+                    body="Connect intake or add buyers to activate command insights."
+                    actionHref="/dashboard/leads/intake"
+                    actionLabel="Add buyers"
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3 sm:gap-3">
+                    {pipelineSnapshot.map((stage) => (
+                      <div key={stage.label} className={`${CARD_NORMAL} p-3 text-center`}>
+                        <p className={`text-[9px] font-semibold tracking-wider uppercase ${MUTED}`}>
+                          {stage.label}
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-[#F8FAFC]">{stage.count}</p>
+                        <p className={`mt-0.5 text-[10px] ${MUTED}`}>{stage.volume}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="min-w-0 pb-2 md:col-span-2 lg:hidden">
+                <SectionTitle title="Quick launch" />
+                <div className="grid grid-cols-2 gap-2 min-[390px]:grid-cols-4 sm:gap-3">
+                  {QUICK_ACTIONS.map((action) => (
+                    <Link
+                      key={action.label}
+                      href={action.href}
+                      className={`${CARD_NORMAL} flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-2xl p-2.5 text-center transition active:scale-95 sm:min-h-24`}
+                    >
+                      <span className={`flex items-center justify-center rounded-xl border border-[#1E2A44] bg-[#0B1020] text-[#00F2FE] ${TOUCH_TARGET}`}>
+                        <IconGlyph kind={action.icon} className="h-5 w-5" />
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#F8FAFC] sm:text-xs">
+                        {action.label}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div className="hidden min-w-0 lg:block">
+        <AiAssistantPanel
+          insights={insights}
+          loading={loading}
+          titleId={desktopAiTitleId}
+        />
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={openAi}
+      aria-expanded={aiOpen}
+      aria-controls={drawerTitleId}
+      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center justify-center rounded-full border border-[#00F2FE]/50 bg-[#00F2FE] text-[#080C1A] shadow-[0_0_20px_rgba(0,242,254,0.4)] transition active:scale-95 lg:hidden ${TOUCH_TARGET}`}
+      aria-label="Open AI assistant"
+    >
+      <IconGlyph kind="ai" className="h-6 w-6" />
+    </button>
+
+    <AiDrawer
+      open={aiOpen}
+      onClose={closeAi}
+      titleId={drawerTitleId}
+      insights={insights}
+      loading={loading}
+    />
+  </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <LeadsProvider>
+      <DashboardLeadsOsScreen />
+    </LeadsProvider>
+  );
+}
+

@@ -41,6 +41,20 @@ export function LeadsProvider({ children }: { readonly children: ReactNode }) {
       if (error) {
         console.error("[LEADS_FETCH_FAILURE]", { message: error.message });
         setStatusMessage("Unable to load buyers.");
+        // #region agent log
+        fetch("http://127.0.0.1:7764/ingest/a95af5bd-0217-4f46-848b-1173c2c72d98", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "3fd78e" },
+          body: JSON.stringify({
+            sessionId: "3fd78e",
+            hypothesisId: "D",
+            location: "LeadsProvider.tsx:refreshLeads",
+            message: "leads_fetch_error",
+            data: { errorMessage: error.message },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         return;
       }
 
@@ -48,6 +62,20 @@ export function LeadsProvider({ children }: { readonly children: ReactNode }) {
         coerceLeadRow(row as Record<string, unknown>),
       );
       setLeads(mapped);
+      // #region agent log
+      fetch("http://127.0.0.1:7764/ingest/a95af5bd-0217-4f46-848b-1173c2c72d98", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "3fd78e" },
+        body: JSON.stringify({
+          sessionId: "3fd78e",
+          hypothesisId: "D",
+          location: "LeadsProvider.tsx:refreshLeads",
+          message: "leads_fetch_ok",
+          data: { leadCount: mapped.length },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       setSelectedLead((prev) => {
         if (prev) return mapped.find((l) => l.id === prev.id) ?? mapped[0] ?? null;
         return mapped[0] ?? null;
