@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     console.error("[AUTH_SIGNOUT_FAILURE]", { error });
   }
 
-  const url = new URL("/", request.url);
+  const url = new URL("/login", request.url);
   revalidatePath("/", "layout");
   return NextResponse.redirect(url, { status: 302 });
 }

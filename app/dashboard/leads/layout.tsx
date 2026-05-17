@@ -1,6 +1,7 @@
 import { AmbientWorkspace } from "@/components/leads/spatial/AmbientWorkspace";
 import { LeadsProvider } from "@/components/leads/LeadsProvider";
 import { getAdminSession } from "@/lib/auth/admin";
+import { isRelaxedLogin } from "@/lib/auth/relaxed-login";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,9 +9,7 @@ import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
-const isDevGuest =
-  process.env.NEXT_PUBLIC_PARABLE_DEV_GUEST === "1" ||
-  process.env.NEXT_PUBLIC_PARABLE_DEV_GUEST === "true";
+const isDevGuest = isRelaxedLogin();
 
 export default async function LeadsLayout({
   children,

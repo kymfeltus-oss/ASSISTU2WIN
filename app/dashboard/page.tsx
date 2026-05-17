@@ -16,6 +16,7 @@ import { getPotentialHudTier } from "@/lib/leads/potential-index";
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   APP_MAIN_GRID,
   MUTED,
@@ -59,6 +60,16 @@ const SECTION_GRID =
   "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5";
 const TOUCH_TARGET =
   "min-h-11 min-w-11 touch-manipulation";
+
+const DASHBOARD_HEADER_ACTION_LINK_BASE =
+  "inline-flex shrink-0 min-h-11 items-center justify-center rounded-xl border px-3 text-[11px] font-semibold tracking-wide whitespace-nowrap transition touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00F2FE] sm:px-4 sm:text-xs";
+
+function dashboardHeaderActionLinkClass(isActive: boolean): string {
+  if (isActive) {
+    return `${DASHBOARD_HEADER_ACTION_LINK_BASE} border-[#00F2FE] bg-[rgba(0,242,254,0.22)] text-[#B8FDFF] shadow-[0_0_16px_rgba(0,242,254,0.2)]`;
+  }
+  return `${DASHBOARD_HEADER_ACTION_LINK_BASE} border-[#00F2FE]/40 bg-[rgba(0,242,254,0.08)] text-[#00F2FE] hover:border-[#00F2FE]/70 hover:bg-[rgba(0,242,254,0.14)] hover:text-[#B8FDFF] active:scale-[0.98] active:border-[#00F2FE] active:bg-[rgba(0,242,254,0.2)]`;
+}
 
 function getLeadInitials(name: string): string {
   const parts = name
@@ -880,10 +891,12 @@ function ReadyToWritePanel({
 }
 
 function DashboardLeadsOsScreen() {
+  const pathname = usePathname();
   const drawerTitleId = useId();
   const desktopAiTitleId = useId();
   const [aiOpen, setAiOpen] = useState(false);
   const { leads, loading, statusMessage } = useLeads();
+  const isAddLeadActive = pathname.startsWith("/dashboard/leads/intake");
 
   const closeAi = useCallback(() => setAiOpen(false), []);
   const openAi = useCallback(() => setAiOpen(true), []);
@@ -935,7 +948,7 @@ function DashboardLeadsOsScreen() {
       <div className={APP_MAIN_GRID}>
         <main className="min-w-0">
             <div className="flex min-h-dvh w-full min-w-0 flex-col">
-          <header className="mb-5 flex items-center gap-3 pt-1 lg:pt-4">
+          <header className="mb-5 flex flex-wrap items-center gap-3 pt-1 lg:pt-4">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
             <Image
               src={BRAND_LOGO_SRC}
@@ -957,14 +970,23 @@ function DashboardLeadsOsScreen() {
                 Revenue command board for your active buyer pipeline.
               </p>
             </div>
-            <form action="/api/auth/signout" method="POST" className="lg:hidden">
-              <button
-                type="submit"
-                className="rounded-lg border border-[#1E2A44] bg-[#0B1020] px-2.5 py-1.5 text-[10px] font-semibold text-[#94A3B8] transition hover:text-[#F8FAFC]"
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <Link
+                href="/dashboard/leads/intake"
+                aria-current={isAddLeadActive ? "page" : undefined}
+                className={dashboardHeaderActionLinkClass(isAddLeadActive)}
               >
-                Sign out
-              </button>
-            </form>
+                + Add New Lead
+              </Link>
+              <form action="/api/auth/signout" method="POST" className="lg:hidden">
+                <button
+                  type="submit"
+                  className={`rounded-lg border border-[#1E2A44] bg-[#0B1020] px-2.5 py-1.5 text-[10px] font-semibold text-[#94A3B8] transition hover:text-[#F8FAFC] ${TOUCH_TARGET}`}
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
           </header>
 
         {statusMessage ? (

@@ -46,6 +46,8 @@ export type CommandReportMarketSignal = {
   readonly tone: "cyan" | "green" | "amber" | "red" | "muted";
 };
 
+export type CommandReportDataState = "available" | "empty" | "unavailable";
+
 export type CommandReportMetrics = {
   readonly totalCount: number;
   readonly totalValue: number;

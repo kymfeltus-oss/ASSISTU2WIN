@@ -11,14 +11,16 @@ import type {
   CommandReportRiskItem,
 } from "./command-report-types";
 
-export type OpportunityMetricsRow = {
-  estimated_value: number | string | null;
+export type LeadPipelineRow = {
+  target_budget: number | string | null;
   stage: string | null;
+  financing_type: string | null;
 };
 
 type LeadMetricsRow = {
   target_budget: number | string | null;
   current_status: string | null;
+  financing_type?: string | null;
 };
 
 const LEAD_STATUS_TO_DEAL_STAGE: Readonly<Record<LeadStatus, DealStage>> = {
@@ -36,12 +38,11 @@ export function leadStatusToDealStage(status: string | null): DealStage {
   return "INTAKE";
 }
 
-export function leadRowToOpportunityMetrics(
-  row: LeadMetricsRow,
-): OpportunityMetricsRow {
+export function leadRowToPipelineMetrics(row: LeadMetricsRow): LeadPipelineRow {
   return {
-    estimated_value: row.target_budget,
+    target_budget: row.target_budget,
     stage: leadStatusToDealStage(row.current_status),
+    financing_type: row.financing_type ?? null,
   };
 }
 
@@ -72,14 +73,14 @@ function formatCompactCurrency(value: number): string {
 }
 
 function sumStageValue(
-  opportunities: readonly OpportunityMetricsRow[],
+  leadRows: readonly LeadPipelineRow[],
   stages: readonly DealStage[],
 ): number {
   const allowed = new Set(stages);
-  return opportunities.reduce((sum, row) => {
+  return leadRows.reduce((sum, row) => {
     const stage = parseDealStage(row.stage) ?? "INTAKE";
     if (!allowed.has(stage)) return sum;
-    return sum + numericValue(row.estimated_value);
+    return sum + numericValue(row.target_budget);
   }, 0);
 }
 
@@ -105,9 +106,9 @@ function buildDonutGradient(
 }
 
 export function buildCommandReportMetrics(
-  opportunities: readonly OpportunityMetricsRow[],
+  leadRows: readonly LeadPipelineRow[],
 ): CommandReportMetrics {
-  const totalCount = opportunities.length;
+  const totalCount = leadRows.length;
   const hasData = totalCount > 0;
 
   const stageCounts: Record<DealStage, number> = {
@@ -118,15 +119,22 @@ export function buildCommandReportMetrics(
     CLOSING_ROOM: 0,
   };
 
-  opportunities.forEach((row) => {
+  leadRows.forEach((row) => {
     const stage = parseDealStage(row.stage) ?? "INTAKE";
     stageCounts[stage]++;
   });
 
-  const totalValue = opportunities.reduce(
-    (acc, row) => acc + numericValue(row.estimated_value),
+  const totalValue = leadRows.reduce(
+    (acc, row) => acc + numericValue(row.target_budget),
     0,
   );
+
+  const fhaBuyerCount = leadRows.filter((row) => row.financing_type === "fha").length;
+  const cashBuyerCount = leadRows.filter((row) => row.financing_type === "cash").length;
+  const intakeWithoutFinancing = leadRows.filter(
+    (row) =>
+      (parseDealStage(row.stage) ?? "INTAKE") === "INTAKE" && row.financing_type == null,
+  ).length;
   const projectedCommission = totalValue * COMMISSION_RATE;
 
   const intakeCount = stageCounts.INTAKE;
@@ -160,7 +168,12 @@ export function buildCommandReportMetrics(
     },
     {
       label: "Financing Friction",
-      display: "Needs data",
+      display:
+        hasData && intakeWithoutFinancing > 0
+          ? String(intakeWithoutFinancing)
+          : hasData
+            ? "0"
+            : "Needs data",
       tone: "amber",
     },
     {
@@ -174,17 +187,17 @@ export function buildCommandReportMetrics(
     {
       label: "Ready to Write",
       subtitle: "Highest probability revenue",
-      volume: sumStageValue(opportunities, ["UNDER_CONTRACT", "CLOSING_ROOM"]),
+      volume: sumStageValue(leadRows, ["UNDER_CONTRACT", "CLOSING_ROOM"]),
       volumeDisplay: formatCompactCurrency(
-        sumStageValue(opportunities, ["UNDER_CONTRACT", "CLOSING_ROOM"]),
+        sumStageValue(leadRows, ["UNDER_CONTRACT", "CLOSING_ROOM"]),
       ),
       tone: "green",
     },
     {
       label: "Active Search",
       subtitle: "Touring and listing engagement",
-      volume: sumStageValue(opportunities, ["HOME_SHOPPING"]),
-      volumeDisplay: formatCompactCurrency(sumStageValue(opportunities, ["HOME_SHOPPING"])),
+      volume: sumStageValue(leadRows, ["HOME_SHOPPING"]),
+      volumeDisplay: formatCompactCurrency(sumStageValue(leadRows, ["HOME_SHOPPING"])),
       tone: "cyan",
     },
     {
@@ -197,8 +210,8 @@ export function buildCommandReportMetrics(
     {
       label: "At Risk",
       subtitle: "Needs immediate attention",
-      volume: sumStageValue(opportunities, ["INTAKE"]),
-      volumeDisplay: formatCompactCurrency(sumStageValue(opportunities, ["INTAKE"])),
+      volume: sumStageValue(leadRows, ["INTAKE"]),
+      volumeDisplay: formatCompactCurrency(sumStageValue(leadRows, ["INTAKE"])),
       tone: "red",
     },
   ];
@@ -264,25 +277,25 @@ export function buildCommandReportMetrics(
     {
       label: "Need Lender",
       description: "Missing lender connection",
-      display: "Needs data",
+      display: hasData ? String(intakeWithoutFinancing) : "Needs data",
       tone: "amber",
     },
     {
       label: "Missing Pre-Approval",
       description: "Cannot advance to offer",
-      display: "Needs data",
+      display: hasData ? String(stageCounts.PRE_APPROVAL) : "Needs data",
       tone: "red",
     },
     {
       label: "FHA Buyers",
-      description: "Strong opportunity segment",
-      display: "Needs data",
+      description: "Strong buyer segment",
+      display: hasData ? String(fhaBuyerCount) : "Needs data",
       tone: "cyan",
     },
     {
       label: "Cash Buyers",
       description: "Fastest path to close",
-      display: "Needs data",
+      display: hasData ? String(cashBuyerCount) : "Needs data",
       tone: "green",
     },
     {
@@ -326,18 +339,18 @@ export function buildCommandReportMetrics(
     },
   ];
 
-  const values = opportunities
-    .map((row) => numericValue(row.estimated_value))
+  const values = leadRows
+    .map((row) => numericValue(row.target_budget))
     .filter((value) => value > 0);
   const avgValue =
     values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 
   let budgetCluster = "Needs data";
   if (values.length > 0) {
-    if (avgValue >= 750_000) budgetCluster = "$750k+ cluster";
-    else if (avgValue >= 500_000) budgetCluster = "$500k–$749k cluster";
-    else if (avgValue >= 350_000) budgetCluster = "$350k–$499k cluster";
-    else budgetCluster = "Under $350k cluster";
+    if (avgValue >= 750_000) budgetCluster = "$750k+";
+    else if (avgValue >= 500_000) budgetCluster = "$500k–$749k";
+    else if (avgValue >= 350_000) budgetCluster = "$350k–$499k";
+    else budgetCluster = "Under $350k";
   }
 
   const stageDemandRows = [
@@ -404,7 +417,7 @@ export function buildCommandReportMetrics(
         : "Pipeline stage advancement.";
 
   const briefingNarrative = [
-    `Your biggest revenue opportunity is the ${biggestRevenue?.label.toLowerCase() ?? "active search"} segment.`,
+    `Your biggest revenue segment is ${biggestRevenue?.label.toLowerCase() ?? "active search"}.`,
     "Your biggest conversion leak is financing uncertainty.",
     "The immediate operational focus should be lender routing, same-day follow-up for high-intent buyers, and recovery outreach for buyers silent over 72 hours.",
   ].join(" ");

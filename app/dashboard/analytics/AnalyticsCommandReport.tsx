@@ -1,11 +1,28 @@
 "use client";
 
-import type { CommandReportMetrics } from "./command-report-types";
+import type {
+  CommandReportDataState,
+  CommandReportMetrics,
+} from "./command-report-types";
 import styles from "./analytics-command-report.module.css";
 import { useCallback, useState } from "react";
 
 type AnalyticsCommandReportProps = {
   readonly metrics: CommandReportMetrics;
+  readonly dataState: CommandReportDataState;
+};
+
+const EMPTY_STATE_COPY: Readonly<
+  Record<Exclude<CommandReportDataState, "available">, { readonly title: string; readonly body: string }>
+> = {
+  empty: {
+    title: "No active buyers yet",
+    body: "Add buyers from intake or your command hub. This report will populate as soon as pipeline data is available.",
+  },
+  unavailable: {
+    title: "Buyer analytics unavailable",
+    body: "We could not load leads from your workspace. Confirm admin access and connection, then refresh this page.",
+  },
 };
 
 function toneClass(tone: "cyan" | "green" | "amber" | "red" | "muted"): string {
@@ -23,7 +40,10 @@ function pillClass(pill: "red" | "amber" | "cyan" | "green"): string {
   return styles.pillCyan;
 }
 
-export function AnalyticsCommandReport({ metrics }: AnalyticsCommandReportProps) {
+export function AnalyticsCommandReport({
+  metrics,
+  dataState,
+}: AnalyticsCommandReportProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const handlePrint = useCallback(() => {
@@ -56,8 +76,8 @@ export function AnalyticsCommandReport({ metrics }: AnalyticsCommandReportProps)
         <div>
           <h1>Leads Analytics Intelligence</h1>
           <p>
-            Revenue, readiness, risk, financing friction, and market opportunity in one
-            executive report.
+            Revenue, readiness, risk, financing friction, and buyer demand in one executive
+            report.
           </p>
           <div className={styles.notice}>
             Report generated today · Agent view · Assist U2 Win
@@ -90,6 +110,18 @@ export function AnalyticsCommandReport({ metrics }: AnalyticsCommandReportProps)
       </header>
 
       {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
+
+      {dataState !== "available" ? (
+        <div
+          className={`${styles.dataStateBanner} ${styles.panel} ${
+            dataState === "unavailable" ? styles.dataStateUnavailable : styles.dataStateEmpty
+          }`}
+          role="status"
+        >
+          <strong>{EMPTY_STATE_COPY[dataState].title}</strong>
+          <p>{EMPTY_STATE_COPY[dataState].body}</p>
+        </div>
+      ) : null}
 
       <section className={styles.snapshot}>
         {metrics.executiveSnapshot.map((kpi) => (
@@ -233,14 +265,14 @@ export function AnalyticsCommandReport({ metrics }: AnalyticsCommandReportProps)
 
         <div className={`${styles.card} ${styles.panel}`}>
           <div className={styles.cardHead}>
-            <h2>Market Opportunity Signals</h2>
+            <h2>Market Buyer Signals</h2>
             <span>ZIP intelligence</span>
           </div>
           <div className={styles.marketGrid}>
             {metrics.marketSignals.map((signal) => (
               <div key={signal.label} className={`${styles.market} ${styles.panel}`}>
                 <strong className={toneClass(signal.tone)}>{signal.value}</strong>
-                <span>{signal.label}</span>
+                <span className={styles.marketLabel}>{signal.label}</span>
               </div>
             ))}
           </div>

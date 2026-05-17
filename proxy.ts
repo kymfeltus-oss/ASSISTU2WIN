@@ -1,3 +1,5 @@
+import { isRelaxedLogin } from "@/lib/auth/relaxed-login";
+import { getSupabasePublicEnv } from "@/lib/supabase/public-env";
 import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
@@ -9,14 +11,15 @@ function copyCookiesToResponse(from: NextResponse, to: NextResponse): void {
 }
 
 export async function proxy(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let supabaseUrl: string;
+  let supabaseAnonKey: string;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("[MIDDLEWARE_CONFIG_MISSING]", {
-      hasUrl: Boolean(supabaseUrl),
-      hasAnonKey: Boolean(supabaseAnonKey),
-    });
+  try {
+    const env = getSupabasePublicEnv();
+    supabaseUrl = env.url;
+    supabaseAnonKey = env.anonKey;
+  } catch {
+    console.error("[PROXY_CONFIG_MISSING]");
     return NextResponse.next({
       request: {
         headers: request.headers,
@@ -39,11 +42,6 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });
@@ -58,13 +56,13 @@ export async function proxy(request: NextRequest) {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
-      console.error("[MIDDLEWARE_AUTH_GET_USER]", { message: error.message });
+      console.error("[PROXY_AUTH_GET_USER]", { message: error.message });
       user = null;
     } else {
       user = data.user;
     }
   } catch (error: unknown) {
-    console.error("[MIDDLEWARE_AUTH_GET_USER_FAILURE]", { error });
+    console.error("[PROXY_AUTH_GET_USER_FAILURE]", { error });
     user = null;
   }
 
@@ -83,7 +81,7 @@ export async function proxy(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (user && isAuthPage) {
+  if (user && isAuthPage && !isRelaxedLogin()) {
     const redirectResponse = NextResponse.redirect(
       new URL("/dashboard", request.url),
     );

@@ -36,6 +36,52 @@
   font-size: 12px;
 }
 
+.dataStateBanner {
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border-radius: 18px;
+}
+
+.dataStateBanner strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+
+.dataStateBanner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+.dataStateEmpty {
+  border-color: rgba(0, 242, 254, 0.22);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 242, 254, 0.08),
+    rgba(17, 24, 39, 0.72)
+  );
+}
+
+.dataStateEmpty strong {
+  color: #00f2fe;
+}
+
+.dataStateUnavailable {
+  border-color: rgba(255, 189, 89, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 189, 89, 0.1),
+    rgba(17, 24, 39, 0.72)
+  );
+}
+
+.dataStateUnavailable strong {
+  color: #ffbd59;
+}
+
 .actions {
   display: flex;
   gap: 10px;
@@ -406,27 +452,40 @@
   line-height: 1.45;
 }
 
+/* Half-width parent at desktop — 2×2 keeps values on one line */
 .marketGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .market {
-  padding: 18px;
+  padding: 14px 16px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 
 .market strong {
   display: block;
-  font-size: 24px;
-  overflow-wrap: anywhere;
+  font-size: clamp(14px, 1.6vw, 17px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
-.market span {
+.marketLabel {
   color: #94a3b8;
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.35;
   display: block;
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .feedback {
@@ -444,9 +503,13 @@
     grid-template-columns: 1fr;
   }
 
-  .briefGrid,
-  .marketGrid {
+  .briefGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Full-width card — room for four signals in one row */
+  .marketGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -500,7 +563,7 @@
 
   .header p,
   .row small,
-  .market span,
+  .marketLabel,
   .brief span,
   .risk p,
   .notice {
