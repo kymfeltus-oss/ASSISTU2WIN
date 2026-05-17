@@ -28,7 +28,7 @@ export type LaunchLiveRoomPayload = {
 };
 
 export type ActionCenterProps = {
-  readonly initialAppointments: Appointment[];
+  readonly initialAppointments: readonly Appointment[];
   readonly onLaunchLiveRoom?: (payload: LaunchLiveRoomPayload) => void;
 };
 
