@@ -44,10 +44,15 @@ type GoLiveErrorPayload = {
 function isGoLiveSuccessPayload(
   value: GoLiveSuccessPayload | GoLiveErrorPayload | null,
 ): value is GoLiveSuccessPayload {
+  if (value === null) {
+    return false;
+  }
   return (
-    value !== null &&
+    "token" in value &&
     typeof value.token === "string" &&
+    "roomName" in value &&
     typeof value.roomName === "string" &&
+    "appointmentId" in value &&
     typeof value.appointmentId === "string"
   );
 }
