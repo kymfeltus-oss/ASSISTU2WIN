@@ -1,14 +1,15 @@
 "use client";
 
-import { spatial } from "@/components/leads/spatial/spatial-styles";
+import {
+  IntakeField,
+  IntakeSection,
+  IntakeSelect,
+  IntakeTextarea,
+  IntakeToggle,
+  IntakeTwoCol,
+} from "@/components/leads/intake/admin-intake-ui";
 import type { LeadCommunicationPreferences } from "@/lib/leads/admin-intake-fields";
 import { EMPTY_COMMUNICATION_PREFERENCES } from "@/lib/leads/admin-intake-fields";
-import type { ReactNode } from "react";
-
-const INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white focus:border-cyan-400/40 focus:outline-none";
-
-const SECTION_CLASS = "space-y-4 rounded-2xl bg-white/[0.02] p-4 ring-1 ring-white/[0.06]";
 
 export type AdminIntakeExtendedFormState = {
   readonly coBuyerName: string;
@@ -74,65 +75,6 @@ type Props = {
   ) => void;
 };
 
-function TwoColGrid({
-  children,
-  className = "",
-}: {
-  readonly children: ReactNode;
-  readonly className?: string;
-}) {
-  return <div className={`grid gap-4 sm:grid-cols-2 ${className}`}>{children}</div>;
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-  readonly type?: string;
-  readonly placeholder?: string;
-}) {
-  return (
-    <label className="block space-y-1.5">
-      <span className={spatial.label}>{label}</span>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT_CLASS}
-      />
-    </label>
-  );
-}
-
-function ToggleRow({
-  label,
-  checked,
-  onChange,
-}: {
-  readonly label: string;
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white/[0.02] px-3 py-2 ring-1 ring-white/[0.06]">
-      <span className="text-xs text-slate-300">{label}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-cyan-400"
-      />
-    </label>
-  );
-}
-
 export function AdminIntakeExtendedFields({
   state,
   showLeadSourceOther,
@@ -140,146 +82,148 @@ export function AdminIntakeExtendedFields({
   onCommunicationToggle,
 }: Props) {
   return (
-    <>
-      <details className={SECTION_CLASS} open>
-        <summary className="cursor-pointer text-xs font-semibold tracking-wide text-cyan-300/90 uppercase">
-          Co-buyer
-        </summary>
-        <TwoColGrid className="mt-4">
-          <Field label="Co-buyer name" value={state.coBuyerName} onChange={(v) => onChange({ coBuyerName: v })} />
-          <Field label="Co-buyer email" type="email" value={state.coBuyerEmail} onChange={(v) => onChange({ coBuyerEmail: v })} />
-          <Field label="Co-buyer phone" type="tel" value={state.coBuyerPhone} onChange={(v) => onChange({ coBuyerPhone: v })} />
-          <Field
+    <div className="flex min-w-0 flex-col gap-3 md:gap-4">
+      <IntakeSection title="Co-Buyer Information">
+        <IntakeTwoCol>
+          <IntakeField label="Co-buyer name" value={state.coBuyerName} onChange={(v) => onChange({ coBuyerName: v })} />
+          <IntakeField
             label="Relationship"
             value={state.coBuyerRelationship}
             onChange={(v) => onChange({ coBuyerRelationship: v })}
             placeholder="Spouse, partner…"
           />
-        </TwoColGrid>
-      </details>
+          <IntakeField label="Co-buyer email" type="email" value={state.coBuyerEmail} onChange={(v) => onChange({ coBuyerEmail: v })} />
+          <IntakeField label="Co-buyer phone" type="tel" value={state.coBuyerPhone} onChange={(v) => onChange({ coBuyerPhone: v })} />
+        </IntakeTwoCol>
+      </IntakeSection>
 
-      <details className={SECTION_CLASS}>
-        <summary className="cursor-pointer text-xs font-semibold tracking-wide text-cyan-300/90 uppercase">
-          Location & housing
-        </summary>
-        <div className="mt-4 space-y-4">
+      <IntakeSection title="Address & Source Details">
+        <div className="space-y-3">
           {showLeadSourceOther ? (
-            <Field
+            <IntakeField
               label="Lead source (other)"
               value={state.leadSourceOther}
               onChange={(v) => onChange({ leadSourceOther: v })}
             />
           ) : null}
-          <Field label="Street address" value={state.streetAddress} onChange={(v) => onChange({ streetAddress: v })} />
-          <TwoColGrid>
-            <Field label="City" value={state.city} onChange={(v) => onChange({ city: v })} />
-            <Field label="State" value={state.state} onChange={(v) => onChange({ state: v })} />
-            <Field label="Zip code" value={state.zipCode} onChange={(v) => onChange({ zipCode: v })} />
-          </TwoColGrid>
-          <label className="block space-y-1.5">
-            <span className={spatial.label}>Current housing</span>
-            <select
+          <IntakeField label="Street address" value={state.streetAddress} onChange={(v) => onChange({ streetAddress: v })} />
+          <IntakeTwoCol>
+            <IntakeField label="City" value={state.city} onChange={(v) => onChange({ city: v })} />
+            <IntakeField label="State" value={state.state} onChange={(v) => onChange({ state: v })} />
+            <IntakeField label="Zip code" value={state.zipCode} onChange={(v) => onChange({ zipCode: v })} />
+            <IntakeSelect
+              label="Current housing"
               value={state.currentHousingStatus}
-              onChange={(e) => onChange({ currentHousingStatus: e.target.value })}
-              className={INPUT_CLASS}
+              onChange={(v) => onChange({ currentHousingStatus: v })}
             >
-              <option value="">—</option>
+              <option value="">Select…</option>
               <option value="Renting">Renting</option>
               <option value="Own">Own</option>
               <option value="Living with Family">Living with Family</option>
               <option value="Other">Other</option>
-            </select>
-          </label>
+            </IntakeSelect>
+          </IntakeTwoCol>
         </div>
-      </details>
+      </IntakeSection>
 
-      <details className={SECTION_CLASS}>
-        <summary className="cursor-pointer text-xs font-semibold tracking-wide text-cyan-300/90 uppercase">
-          Financing profile
-        </summary>
-        <TwoColGrid className="mt-4">
-          <Field label="DTI ratio (%)" type="number" value={state.dtiRatio} onChange={(v) => onChange({ dtiRatio: v })} />
-          <label className="block space-y-1.5">
-            <span className={spatial.label}>Credit score range</span>
-            <select
-              value={state.creditScoreRange}
-              onChange={(e) => onChange({ creditScoreRange: e.target.value })}
-              className={INPUT_CLASS}
-            >
-              <option value="">—</option>
-              <option value="740+">740+</option>
-              <option value="700-739">700-739</option>
-              <option value="660-699">660-699</option>
-              <option value="620-659">620-659</option>
-              <option value="Below 620">Below 620</option>
-            </select>
-          </label>
-          <Field label="Down payment ($)" type="number" value={state.downPaymentAmount} onChange={(v) => onChange({ downPaymentAmount: v })} />
-          <Field label="Monthly comfort ($)" type="number" value={state.monthlyPaymentComfort} onChange={(v) => onChange({ monthlyPaymentComfort: v })} />
-          <Field label="Employment" value={state.employmentStatus} onChange={(v) => onChange({ employmentStatus: v })} />
-          <Field label="Lender name" value={state.lenderName} onChange={(v) => onChange({ lenderName: v })} />
-        </TwoColGrid>
-      </details>
+      <IntakeSection title="Finance & Friction Details">
+        <IntakeTwoCol>
+          <IntakeField label="DTI ratio (%)" type="number" value={state.dtiRatio} onChange={(v) => onChange({ dtiRatio: v })} />
+          <IntakeSelect
+            label="Credit score range"
+            value={state.creditScoreRange}
+            onChange={(v) => onChange({ creditScoreRange: v })}
+          >
+            <option value="">Select…</option>
+            <option value="740+">740+</option>
+            <option value="700-739">700-739</option>
+            <option value="660-699">660-699</option>
+            <option value="620-659">620-659</option>
+            <option value="Below 620">Below 620</option>
+          </IntakeSelect>
+          <IntakeField label="Down payment ($)" type="number" value={state.downPaymentAmount} onChange={(v) => onChange({ downPaymentAmount: v })} />
+          <IntakeField label="Monthly comfort ($)" type="number" value={state.monthlyPaymentComfort} onChange={(v) => onChange({ monthlyPaymentComfort: v })} />
+          <IntakeField label="Employment" value={state.employmentStatus} onChange={(v) => onChange({ employmentStatus: v })} />
+          <IntakeField label="Lender name" value={state.lenderName} onChange={(v) => onChange({ lenderName: v })} />
+        </IntakeTwoCol>
+      </IntakeSection>
 
-      <details className={SECTION_CLASS}>
-        <summary className="cursor-pointer text-xs font-semibold tracking-wide text-cyan-300/90 uppercase">
-          Communication plan
-        </summary>
-        <TwoColGrid className="mt-4">
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className={spatial.label}>Preferred channel</span>
-            <select
-              value={state.preferredCommunicationChannel}
-              onChange={(e) => onChange({ preferredCommunicationChannel: e.target.value })}
-              className={INPUT_CLASS}
-            >
-              <option value="Text">Text</option>
-              <option value="Call">Call</option>
-              <option value="Email">Email</option>
-            </select>
-          </label>
-          <Field label="Contact window" value={state.preferredContactWindow} onChange={(v) => onChange({ preferredContactWindow: v })} placeholder="Morning, evenings…" />
-          <Field label="Follow-up frequency" value={state.followUpFrequency} onChange={(v) => onChange({ followUpFrequency: v })} />
-          <Field label="First follow-up" type="date" value={state.firstFollowUpDate} onChange={(v) => onChange({ firstFollowUpDate: v })} />
+      <IntakeSection title="Communication Plan">
+        <IntakeTwoCol>
+          <IntakeSelect
+            label="Preferred channel"
+            value={state.preferredCommunicationChannel}
+            onChange={(v) => onChange({ preferredCommunicationChannel: v })}
+            className="sm:col-span-2"
+          >
+            <option value="Text">Text</option>
+            <option value="Call">Call</option>
+            <option value="Email">Email</option>
+          </IntakeSelect>
+          <IntakeField
+            label="Contact window"
+            value={state.preferredContactWindow}
+            onChange={(v) => onChange({ preferredContactWindow: v })}
+            placeholder="Morning, evenings…"
+          />
           <div className="space-y-2 sm:col-span-2">
-            <ToggleRow label="Welcome email" checked={state.welcomeEmailEnabled} onChange={(v) => onChange({ welcomeEmailEnabled: v })} />
-            <ToggleRow
+            <IntakeToggle
+              label="Welcome email"
+              checked={state.welcomeEmailEnabled}
+              onChange={(v) => onChange({ welcomeEmailEnabled: v })}
+            />
+            <IntakeToggle
               label="Buyer consultation invite"
               checked={state.communicationPreferences.buyer_consultation_invite_enabled}
               onChange={(v) => onCommunicationToggle("buyer_consultation_invite_enabled", v)}
             />
-            <ToggleRow
+            <IntakeToggle
               label="Pre-approval reminder"
               checked={state.communicationPreferences.pre_approval_reminder_enabled}
               onChange={(v) => onCommunicationToggle("pre_approval_reminder_enabled", v)}
             />
-            <ToggleRow
+            <IntakeToggle
               label="Market update email"
               checked={state.communicationPreferences.market_update_email_enabled}
               onChange={(v) => onCommunicationToggle("market_update_email_enabled", v)}
             />
-            <ToggleRow
+            <IntakeToggle
               label="Representation agreement reminder"
               checked={state.communicationPreferences.representation_agreement_reminder_enabled}
               onChange={(v) => onCommunicationToggle("representation_agreement_reminder_enabled", v)}
             />
-            <ToggleRow
+            <IntakeToggle
               label="Inactive lead re-engagement"
               checked={state.communicationPreferences.inactive_lead_reengagement_enabled}
               onChange={(v) => onCommunicationToggle("inactive_lead_reengagement_enabled", v)}
             />
           </div>
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className={spatial.label}>Communication notes</span>
-            <textarea
-              value={state.customCommunicationNotes}
-              onChange={(e) => onChange({ customCommunicationNotes: e.target.value })}
-              rows={2}
-              className={INPUT_CLASS}
-            />
-          </label>
-        </TwoColGrid>
-      </details>
-    </>
+          <IntakeTextarea
+            label="Communication notes"
+            value={state.customCommunicationNotes}
+            onChange={(v) => onChange({ customCommunicationNotes: v })}
+            rows={2}
+            className="sm:col-span-2"
+          />
+        </IntakeTwoCol>
+      </IntakeSection>
+
+      <IntakeSection title="Follow-Up Intelligence">
+        <IntakeTwoCol>
+          <IntakeField
+            label="Follow-up frequency"
+            value={state.followUpFrequency}
+            onChange={(v) => onChange({ followUpFrequency: v })}
+            placeholder="Weekly, bi-weekly…"
+          />
+          <IntakeField
+            label="First follow-up date"
+            type="date"
+            value={state.firstFollowUpDate}
+            onChange={(v) => onChange({ firstFollowUpDate: v })}
+          />
+        </IntakeTwoCol>
+      </IntakeSection>
+    </div>
   );
 }
