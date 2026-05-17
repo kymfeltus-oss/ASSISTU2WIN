@@ -52,6 +52,7 @@ function isGoLiveSuccessPayload(
   );
 }
 
+/** Watched by go-live-regression CI (path filter). */
 const PANEL_CLASS =
   "rounded-2xl border border-slate-800/60 bg-slate-950/40 backdrop-blur-xl";
 

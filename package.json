@@ -10,7 +10,8 @@
     "fixtures:go-live": "node scripts/backfill-go-live-fixtures.mjs",
     "cert:go-live": "node scripts/certify-go-live.mjs",
     "cert:go-live:ui": "node scripts/ui-cert-go-live.mjs",
-    "cert:go-live:all": "node scripts/backfill-go-live-fixtures.mjs && npm run cert:go-live && npm run cert:go-live:ui"
+    "cert:go-live:all": "node scripts/backfill-go-live-fixtures.mjs && npm run cert:go-live && npm run cert:go-live:ui",
+    "secrets:go-live": "node scripts/set-github-go-live-secrets.mjs"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",
