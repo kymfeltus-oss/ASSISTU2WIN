@@ -10,9 +10,14 @@ import {
   parsePurchaseTimeline,
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
+import { adminIntakeFormToRequestBody } from "@/lib/leads/admin-intake-fields";
 import type { LeadStatus, LoanType } from "@/lib/leads/types";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
+import {
+  AdminIntakeExtendedFields,
+  createEmptyAdminIntakeExtendedState,
+} from "@/components/leads/intake/AdminIntakeExtendedFields";
 
 type IntakeLoan = Extract<LoanType, "Conventional" | "FHA" | "Cash">;
 type IntakeStatus = Extract<LeadStatus, "New Lead" | "Pre-Approved">;
@@ -43,6 +48,7 @@ export function AddBuyerView() {
   const [manualNotes, setManualNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [extended, setExtended] = useState(createEmptyAdminIntakeExtendedState);
 
   const readiness = useMemo(
     () =>
@@ -79,6 +85,7 @@ export function AddBuyerView() {
           hasVerifiedPreApproval: hasPreApproval,
           purchaseTimeline,
           manualNotes: manualNotes.trim() || null,
+          ...adminIntakeFormToRequestBody(extended),
         }),
       });
       const result: unknown = await response.json().catch(() => null);
@@ -219,9 +226,24 @@ export function AddBuyerView() {
           <textarea
             value={manualNotes}
             onChange={(e) => setManualNotes(e.target.value)}
-            placeholder="Notes (lease end, relocation, schools…)"
+            placeholder="Latest touchpoint (lease end, relocation, schools…)"
             rows={3}
             className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white placeholder:text-slate-600"
+          />
+
+          <AdminIntakeExtendedFields
+            state={extended}
+            showLeadSourceOther={buyerSource === "Other"}
+            onChange={(patch) => setExtended((current) => ({ ...current, ...patch }))}
+            onCommunicationToggle={(key, enabled) =>
+              setExtended((current) => ({
+                ...current,
+                communicationPreferences: {
+                  ...current.communicationPreferences,
+                  [key]: enabled,
+                },
+              }))
+            }
           />
 
           <button
