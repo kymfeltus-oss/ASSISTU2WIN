@@ -5,7 +5,31 @@ import {
 } from "@/components/dashboard/ActionCenter";
 import { LeadAnalysisWorkspace } from "@/components/dashboard/LeadAnalysisWorkspace";
 import type { AnalysisWorkspaceLead } from "@/components/dashboard/LeadAnalysisWorkspace";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { KpiPulse } from "@/components/dashboard/KpiPulse";
+import { LayoutControls } from "@/components/dashboard/LayoutControls";
+import { ProspectingFunnel } from "@/components/dashboard/ProspectingFunnel";
 import { LiveMeetingBadge } from "@/components/dashboard/LiveMeetingBadge";
+import {
+  DEFAULT_LAYOUT_CONFIG,
+  getVisibleWidgetsForZone,
+  loadDashboardLayoutConfig,
+  type DashboardLayoutConfig,
+  type LayoutConfigSource,
+  type WidgetKey,
+} from "@/lib/dashboard/layout-config";
+import {
+  fetchInitialActivityEvents,
+  type ActivityEvent,
+} from "@/lib/leads/activity-feed";
+import {
+  fetchKpiPulseMetrics,
+  type KpiPulseMetrics,
+} from "@/lib/leads/kpi-pulse";
+import {
+  fetchProspectingFunnelLeads,
+  type ProspectingFunnelRow,
+} from "@/lib/leads/prospecting-funnel";
 import { MobileIntakeForm } from "@/components/dashboard/MobileIntakeForm";
 import {
   TokenLinkGenerator,
@@ -25,6 +49,7 @@ import {
 } from "@/lib/supabase/postgrest";
 import { createClient } from "@/lib/supabase/server";
 import { AlertCircle } from "lucide-react";
+import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -334,6 +359,73 @@ function pickTokenLinkLead(
   };
 }
 
+type DashboardWidgetContext = {
+  readonly kpiPulse: KpiPulseMetrics;
+  readonly businessTimeZone: string | undefined;
+  readonly todaysAppointments: readonly Appointment[];
+  readonly prospectingLeads: ProspectingFunnelRow[];
+  readonly initialActivityEvents: ActivityEvent[];
+  readonly tokenLinkLead: TokenLinkLead | null;
+};
+
+function renderDashboardWidget(
+  key: WidgetKey,
+  ctx: DashboardWidgetContext,
+): ReactNode {
+  switch (key) {
+    case "kpi":
+      return <KpiPulse key="kpi" {...ctx.kpiPulse} />;
+    case "liveBadge":
+      return (
+        <LiveMeetingBadge
+          key="liveBadge"
+          businessTimeZone={ctx.businessTimeZone}
+        />
+      );
+    case "actionCenter":
+      return (
+        <ActionCenter
+          key="actionCenter"
+          initialAppointments={ctx.todaysAppointments}
+        />
+      );
+    case "prospectingFunnel":
+      return (
+        <ProspectingFunnel key="prospectingFunnel" leads={ctx.prospectingLeads} />
+      );
+    case "mobileIntake":
+      return (
+        <div key="mobileIntake" className="space-y-5">
+          <MobileIntakeForm />
+          {ctx.tokenLinkLead ? (
+            <TokenLinkGenerator lead={ctx.tokenLinkLead} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/30 p-6 text-center backdrop-blur-sm">
+              <p className="text-sm font-medium text-slate-300">
+                Outbound market links
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                Add an active buyer with a target ZIP to generate tracked SMS
+                links.
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    case "activityFeed":
+      return (
+        <ActivityFeed
+          key="activityFeed"
+          initialEvents={ctx.initialActivityEvents}
+        />
+      );
+    default: {
+      const _exhaustive: never = key;
+      return _exhaustive;
+    }
+  }
+}
+
 function DashboardErrorCard({ message }: { readonly message: string }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-6">
@@ -353,6 +445,16 @@ function DashboardErrorCard({ message }: { readonly message: string }) {
 export default async function LeadsDashboardPage() {
   let workspaceLeads: AnalysisWorkspaceLead[] = [];
   let todaysAppointments: readonly Appointment[] = [];
+  let kpiPulse: KpiPulseMetrics = {
+    pipelineVelocity: 0,
+    projectedGci: 0,
+    hotLeads: 0,
+    meetingsToday: 0,
+  };
+  let initialActivityEvents: ActivityEvent[] = [];
+  let prospectingLeads: ProspectingFunnelRow[] = [];
+  let layoutConfig: DashboardLayoutConfig | null = null;
+  let layoutSource: LayoutConfigSource = "default";
   let fetchError: string | null = null;
   let businessTimeZone: string | undefined;
 
@@ -364,12 +466,25 @@ export default async function LeadsDashboardPage() {
 
     businessTimeZone = await resolveBusinessTimeZone(supabase, user?.id);
 
-    const [leadsResult, appointments] = await Promise.all([
-      supabase.from("leads").select("*").order("created_at", { ascending: false }),
-      fetchTodaysAppointments(supabase, businessTimeZone),
-    ]);
+    if (user?.id) {
+      const loadedLayout = await loadDashboardLayoutConfig(supabase, user.id);
+      layoutConfig = loadedLayout.config;
+      layoutSource = loadedLayout.source;
+    }
+
+    const [leadsResult, appointments, kpiMetrics, activityEvents, funnelLeads] =
+      await Promise.all([
+        supabase.from("leads").select("*").order("created_at", { ascending: false }),
+        fetchTodaysAppointments(supabase, businessTimeZone),
+        fetchKpiPulseMetrics(supabase, businessTimeZone),
+        fetchInitialActivityEvents(supabase),
+        fetchProspectingFunnelLeads(supabase),
+      ]);
 
     todaysAppointments = appointments;
+    kpiPulse = kpiMetrics;
+    initialActivityEvents = activityEvents;
+    prospectingLeads = funnelLeads;
 
     const { data, error } = leadsResult;
 
@@ -401,6 +516,17 @@ export default async function LeadsDashboardPage() {
   }
 
   const tokenLinkLead = pickTokenLinkLead(workspaceLeads);
+  const resolvedLayout = layoutConfig ?? DEFAULT_LAYOUT_CONFIG;
+  const headerWidgets = getVisibleWidgetsForZone(resolvedLayout, "header");
+  const sidebarWidgets = getVisibleWidgetsForZone(resolvedLayout, "sidebar");
+  const widgetContext: DashboardWidgetContext = {
+    kpiPulse,
+    businessTimeZone,
+    todaysAppointments,
+    prospectingLeads,
+    initialActivityEvents,
+    tokenLinkLead,
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col bg-[#090d16] text-slate-50 lg:h-[calc(100dvh-5.75rem)] lg:max-h-[calc(100dvh-5.75rem)] lg:overflow-hidden">
@@ -419,8 +545,11 @@ export default async function LeadsDashboardPage() {
             {workspaceLeads.length} active {workspaceLeads.length === 1 ? "file" : "files"}
           </p>
         </div>
-        <LiveMeetingBadge businessTimeZone={businessTimeZone} />
-        <ActionCenter initialAppointments={todaysAppointments} />
+        <LayoutControls
+          initialConfig={resolvedLayout}
+          initialSource={layoutSource}
+        />
+        {headerWidgets.map((key) => renderDashboardWidget(key, widgetContext))}
       </header>
 
       {/* Split workspace: single feed on mobile, dual independent panels on lg+ */}
@@ -437,31 +566,22 @@ export default async function LeadsDashboardPage() {
           </div>
         </section>
 
-        {/* Intake console — 4/12 */}
+        {/* Pipeline + intake — 4/12 */}
         <aside className={`${PANEL_SHELL} lg:col-span-4`}>
           <div className="shrink-0 border-b border-slate-800/60 px-4 py-3 sm:px-5">
             <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Intake & outbound
+              Pipeline & intake
             </h2>
             <p className="mt-1 text-[11px] text-slate-500">
-              Capture buyers and push tracked market links.
+              Ranked buyers, capture tools, and live engagement.
             </p>
           </div>
-          <div className="custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-5">
-            <MobileIntakeForm />
-            {tokenLinkLead ? (
-              <TokenLinkGenerator lead={tokenLinkLead} />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/30 p-6 text-center backdrop-blur-sm">
-                <p className="text-sm font-medium text-slate-300">
-                  Outbound market links
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  Add an active buyer with a target ZIP to generate tracked SMS
-                  links.
-                </p>
-              </div>
-            )}
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+            <div className="space-y-5">
+              {sidebarWidgets.map((key) =>
+                renderDashboardWidget(key, widgetContext),
+              )}
+            </div>
           </div>
         </aside>
       </div>
