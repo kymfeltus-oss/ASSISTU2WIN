@@ -66,6 +66,9 @@ function coercePreferences(raw: unknown): LeadExtractedPreferences {
       min_bedrooms: null,
       pre_approval_status: null,
       loan_type: "Unknown",
+      hurdle_lender: false,
+      hurdle_home_sale: false,
+      hurdle_down_payment: false,
     };
   }
   const record = raw as Record<string, unknown>;
@@ -89,6 +92,9 @@ function coercePreferences(raw: unknown): LeadExtractedPreferences {
     min_bedrooms: minBedrooms,
     pre_approval_status: preApproval,
     loan_type: parseLoanType(record.loan_type),
+    hurdle_lender: record.hurdle_lender === true,
+    hurdle_home_sale: record.hurdle_home_sale === true,
+    hurdle_down_payment: record.hurdle_down_payment === true,
   };
 }
 
