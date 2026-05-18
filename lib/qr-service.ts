@@ -46,9 +46,30 @@ function normalizeBaseUrl(raw: string | undefined): string {
   return trimmed.replace(/\/$/, "");
 }
 
-/** Server or build-time base URL for QR links. */
+/**
+ * Base URL encoded into QR codes (marketing intake + client invite).
+ *
+ * Resolution order:
+ * 1. `NEXT_PUBLIC_APP_URL` — set in Vercel / `.env` to your live domain (required for SSR)
+ * 2. `window.location.origin` — browser fallback when the admin UI runs on the live site
+ * 3. `NEXT_PUBLIC_DEV_APP_URL` — optional LAN/tunnel override in local development only
+ */
 export function getPublicAppBaseUrl(): string {
-  return normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    return normalizeBaseUrl(appUrl);
+  }
+
+  if (typeof window !== "undefined" && window.location.origin) {
+    return normalizeBaseUrl(window.location.origin);
+  }
+
+  const devUrl = process.env.NEXT_PUBLIC_DEV_APP_URL?.trim();
+  if (devUrl && process.env.NODE_ENV === "development") {
+    return normalizeBaseUrl(devUrl);
+  }
+
+  return normalizeBaseUrl(undefined);
 }
 
 function parseBooleanParam(value: string | null, defaultValue: boolean): boolean {
