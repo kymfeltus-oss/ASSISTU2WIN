@@ -1317,19 +1317,19 @@ function DashboardLeadsOsScreen() {
                   accent="green"
                 />
                 <DashboardKpiCard
-                  label={quickStats[1]?.label ?? "Pipeline"}
+                  label={quickStats[1]?.label ?? "Revenue Pipeline"}
                   value={quickStats[1]?.value ?? "-"}
                   icon={Home}
                   accent="cyan"
                 />
                 <DashboardKpiCard
-                  label={quickStats[2]?.label ?? "Potential Buyers"}
+                  label={quickStats[2]?.label ?? "Leads"}
                   value={quickStats[2]?.value ?? "-"}
                   icon={Users}
                   accent="green"
                 />
                 <DashboardKpiCard
-                  label="Pending Pipeline"
+                  label="Pending Commission Pipeline"
                   value="$42K"
                   subtext="5 in Escrow"
                   icon={TrendingUp}
