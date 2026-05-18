@@ -25,6 +25,31 @@
   --radius-button: 12px;
   --touch-target-min: 44px;
 
+  /* Native-style adaptive shell (fluid — no fixed breakpoint-only layouts) */
+  --app-max-width: min(100%, 96rem);
+  --app-ultrawide-max: min(100%, 112rem);
+  --app-content-pad-inline: clamp(0.75rem, 2.5vw, 2rem);
+  --app-content-pad-block: clamp(0.75rem, 2vw, 1.5rem);
+  --app-gap: clamp(0.625rem, 1.75vw, 1rem);
+  --app-gap-lg: clamp(0.875rem, 2.25vw, 1.5rem);
+  --app-rail-width: clamp(13.5rem, 16vw, 15rem);
+  --app-right-rail-width: clamp(17.5rem, 26vw, 22.5rem);
+  --bottom-nav-height: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  --app-content-bottom-pad: var(--bottom-nav-height);
+  --app-sticky-offset: clamp(0.5rem, 1.5vw, 1rem);
+  --app-sticky-max-height: calc(
+    100dvh - var(--bottom-nav-height) - var(--app-sticky-offset) * 2
+  );
+  --app-workspace-height: calc(100dvh - var(--bottom-nav-height) - 1.5rem);
+
+  /* Fluid typography scale */
+  --app-text-xs: clamp(0.625rem, 0.58rem + 0.2vw, 0.6875rem);
+  --app-text-sm: clamp(0.8125rem, 0.78rem + 0.18vw, 0.875rem);
+  --app-text-base: clamp(0.9375rem, 0.9rem + 0.22vw, 1rem);
+  --app-text-lg: clamp(1.0625rem, 1rem + 0.35vw, 1.125rem);
+  --app-text-xl: clamp(1.125rem, 1.05rem + 0.45vw, 1.25rem);
+  --app-text-2xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+
   /* 2. Panels & cards */
   --panel: #111827;
   --panel2: #161c31;
@@ -115,10 +140,79 @@
   border: 1px solid var(--row-line);
 }
 
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   min-height: 100%;
+  min-height: 100dvh;
+  overflow-x: clip;
   color: var(--text-primary);
+  font-size: var(--app-text-base);
   font-family: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* Root viewport guard — prevents horizontal scroll on all routes */
+.app-viewport {
+  display: flex;
+  min-height: 100dvh;
+  min-height: 100svh;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  overflow-x: clip;
+}
+
+.app-viewport__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Content inset when global bottom nav is visible */
+.app-shell-pad-bottom {
+  padding-bottom: var(--app-content-bottom-pad);
+}
+
+/* Shared page width + horizontal padding for app shells */
+.app-page {
+  box-sizing: border-box;
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--app-ultrawide-max);
+  min-width: 0;
+  padding-inline: var(--app-content-pad-inline);
+}
+
+.app-page--compact {
+  max-width: var(--app-max-width);
+}
+
+/* Overflow-safe flex/grid children */
+.app-min-w-0 {
+  min-width: 0;
+}
+
+.app-overflow-x-clip {
+  overflow-x: clip;
+}
+
+/* Fluid panel scroll cap (single intentional nested scroll) */
+.app-panel-scroll {
+  max-height: min(28rem, 50dvh);
+  overflow-y: auto;
+  overflow-x: clip;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 1024px) {
+  .app-panel-scroll {
+    max-height: min(32rem, calc(100dvh - 12rem));
+  }
 }
 
 ::-webkit-scrollbar {

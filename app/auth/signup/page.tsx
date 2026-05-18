@@ -19,8 +19,8 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
     typeof rawParams.error === "string" ? decodeURIComponent(rawParams.error) : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-xl">
+    <div className="flex min-h-dvh w-full min-w-0 items-center justify-center app-overflow-x-clip bg-slate-900 px-[var(--app-content-pad-inline)] py-12">
+      <div className="w-full min-w-0 max-w-md space-y-8 rounded-2xl border border-slate-700 bg-slate-800 p-[clamp(1.25rem,4vw,2rem)] shadow-xl">
         <div>
           <AppBrand variant="auth" />
           <h1 className="mt-4 text-center text-lg font-semibold text-white">

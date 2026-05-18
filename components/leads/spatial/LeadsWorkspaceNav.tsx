@@ -21,7 +21,7 @@ export function LeadsWorkspaceNav() {
 
   return (
     <header className="sticky top-0 z-30 px-4 pt-5 pb-3 sm:px-8">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="app-page flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between gap-4">
           <AppBrand variant="compact" />
           <Link

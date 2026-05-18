@@ -1096,7 +1096,7 @@ export function LeadAnalysisReportAssistant({
 
   return (
     <aside
-      className={`${CARD_NORMAL} flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] print:hidden`}
+      className={`${CARD_NORMAL} flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-[var(--app-sticky-offset)] lg:max-h-[var(--app-sticky-max-height)] print:hidden`}
     >
       <div className="shrink-0 border-b border-[#1E2A44] px-4 py-3 sm:px-4">
         <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F2FE]/90 uppercase">

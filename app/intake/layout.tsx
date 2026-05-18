@@ -9,6 +9,8 @@ export const metadata: Metadata = {
 /** Sanctuary theme for QR scans — scoped to intake, not global dashboard canvas. */
 export default function IntakeLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-[#0f172a] text-slate-100">{children}</div>
+    <div className="min-h-dvh w-full min-w-0 app-overflow-x-clip bg-[#0f172a] text-slate-100">
+      {children}
+    </div>
   );
 }

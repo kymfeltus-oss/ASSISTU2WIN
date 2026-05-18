@@ -62,10 +62,10 @@ export default async function ArchivePage({ searchParams }: PageProps) {
       : rows;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div className="min-h-dvh w-full min-w-0 app-overflow-x-clip bg-slate-900 text-slate-100">
       {/* Upper Navigation Bar */}
       <nav className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="app-page app-page--compact">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
@@ -112,7 +112,7 @@ export default async function ArchivePage({ searchParams }: PageProps) {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="app-page app-page--compact space-y-8 py-8">
         <div className="border-b border-slate-800 pb-6">
           <div>
             <div className="mb-1 flex items-center gap-2 font-mono text-xs text-slate-500">

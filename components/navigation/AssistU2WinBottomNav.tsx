@@ -17,7 +17,7 @@ export function AssistU2WinBottomNav() {
       style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       aria-label="AssistU2Win navigation"
     >
-      <div className="mx-auto flex w-full max-w-2xl items-stretch justify-between px-1 pt-2 sm:max-w-3xl sm:px-2">
+      <div className="mx-auto flex w-full min-w-0 max-w-[min(100%,42rem)] items-stretch justify-between gap-0.5 px-1 pt-2 sm:max-w-[min(100%,48rem)] sm:gap-1 sm:px-2">
         {ASSISTU2WIN_BOTTOM_NAV.map((item) => {
           const active = isBottomNavItemActive(pathname, item);
           return (

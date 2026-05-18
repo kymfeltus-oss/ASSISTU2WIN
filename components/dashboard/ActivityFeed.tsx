@@ -69,7 +69,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
       <h2 className="mt-1 text-lg font-bold text-[color:var(--text-primary)]">
         MLS &amp; showing alerts
       </h2>
-      <ul className="mt-4 max-h-[400px] space-y-2 overflow-y-auto pr-1">
+      <ul className="app-panel-scroll mt-4 space-y-2 pr-1">
         {activities.map((item) => {
           const meta = TYPE_META[item.type];
           const Icon = meta.Icon;

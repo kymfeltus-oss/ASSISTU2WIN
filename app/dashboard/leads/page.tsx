@@ -403,7 +403,7 @@ export default async function LeadsDashboardPage() {
   const tokenLinkLead = pickTokenLinkLead(workspaceLeads);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col bg-[#090d16] text-slate-50 lg:h-[calc(100dvh-5.75rem)] lg:max-h-[calc(100dvh-5.75rem)] lg:overflow-hidden">
+    <div className="app-page app-page--compact mx-auto flex w-full min-w-0 flex-col bg-[#090d16] text-slate-50 lg:h-[var(--app-workspace-height)] lg:max-h-[var(--app-workspace-height)] lg:overflow-hidden">
       {/* Pinned app chrome — live media + title never scroll away on desktop */}
       <header className="z-20 shrink-0 space-y-3 px-4 pb-3 pt-1 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">

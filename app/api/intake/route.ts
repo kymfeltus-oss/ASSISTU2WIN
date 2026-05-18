@@ -53,7 +53,9 @@ export async function POST(
     return jsonError(400, "Request body must be valid JSON.");
   }
 
-  console.log("DEBUG: Received Payload:", JSON.stringify(body, null, 2));
+  if (process.env.NODE_ENV === "development") {
+    console.log("DEBUG: Received Payload:", JSON.stringify(body, null, 2));
+  }
 
   const leadNameRaw = readString(body, "lead_name", "name");
   const emailRaw = readString(body, "email_address", "email");

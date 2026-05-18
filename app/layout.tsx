@@ -13,6 +13,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#030712",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -28,8 +31,12 @@ export default function RootLayout({
       <head>
         <style dangerouslySetInnerHTML={{ __html: ROOT_CRITICAL_CSS }} />
       </head>
-      <body className="midnight-canvas-gradient flex min-h-dvh flex-col text-[color:var(--text-primary)]">
-        <AppBottomNavGate>{children}</AppBottomNavGate>
+      <body className="midnight-canvas-gradient text-[color:var(--text-primary)]">
+        <div className="app-viewport">
+          <AppBottomNavGate>
+            <div className="app-viewport__main">{children}</div>
+          </AppBottomNavGate>
+        </div>
       </body>
     </html>
   );

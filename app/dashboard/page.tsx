@@ -809,7 +809,7 @@ function AiAssistantPanel({
 }) {
   return (
     <aside
-      className={`${CARD_NORMAL} flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)]`}
+      className={`${CARD_NORMAL} flex min-h-0 min-w-0 flex-col overflow-hidden lg:sticky lg:top-[var(--app-sticky-offset)] lg:max-h-[var(--app-sticky-max-height)]`}
       aria-labelledby={titleId}
     >
       <div className="shrink-0 border-b border-[#1E2A44] px-4 py-4 sm:px-5">
@@ -1241,7 +1241,7 @@ function DashboardLeadsOsScreen() {
   return (
     <>
       <div
-        className="relative min-h-dvh w-full min-w-0 overflow-x-hidden"
+        className="relative w-full min-w-0 app-overflow-x-clip"
         style={{ fontFamily: "var(--font-geist-sans), Inter, system-ui, sans-serif" }}
       >
         <div
@@ -1250,7 +1250,7 @@ function DashboardLeadsOsScreen() {
           aria-hidden
         />
       <div className="relative z-10 flex w-full min-w-0 flex-wrap items-start gap-4 md:gap-6">
-        <main className="min-w-0 flex-1" style={{ minWidth: "320px" }}>
+        <main className="min-w-0 flex-1">
             <div className="flex w-full min-w-0 flex-col">
           <DashboardUtilityBar />
           <div className="mt-4 flex min-w-0 flex-col gap-4 md:gap-6">
@@ -1341,7 +1341,7 @@ function DashboardLeadsOsScreen() {
             <PipelineStatusTracker />
 
             <div className="flex w-full min-w-0 flex-wrap gap-4 md:gap-6">
-              <div className="min-w-0 flex-1 space-y-5 lg:space-y-6" style={{ minWidth: "320px" }}>
+              <div className="min-w-0 flex-1 space-y-5 lg:space-y-6">
               <section className="min-w-0">
                 <HotProspectsHeader addLeadHref="/dashboard/leads/new" />
                 {loading ? (
@@ -1461,7 +1461,7 @@ function DashboardLeadsOsScreen() {
             </div>
               </div>
 
-              <div className="w-full min-w-0 space-y-4 md:space-y-6 lg:w-[320px]">
+              <div className="w-full min-w-0 space-y-4 md:space-y-6 lg:w-full lg:max-w-[var(--app-right-rail-width)] lg:shrink-0 lg:basis-[var(--app-right-rail-width)]">
                 <div>
                   <p className={`${SECTION_LABEL_CLASS} mb-1`}>Critical Deadlines</p>
                   <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Urgent Milestones</h2>
@@ -1485,7 +1485,7 @@ function DashboardLeadsOsScreen() {
       onClick={openAi}
       aria-expanded={aiOpen}
       aria-controls={drawerTitleId}
-      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center justify-center rounded-full border border-[#00F2FE]/50 bg-[#00F2FE] text-[#080C1A] shadow-[0_0_20px_rgba(0,242,254,0.4)] transition active:scale-95 lg:hidden ${TOUCH_TARGET}`}
+      className={`fixed bottom-[var(--bottom-nav-height)] left-1/2 z-40 flex -translate-x-1/2 items-center justify-center rounded-full border border-[#00F2FE]/50 bg-[#00F2FE] text-[#080C1A] shadow-[0_0_20px_rgba(0,242,254,0.4)] transition active:scale-95 lg:hidden ${TOUCH_TARGET}`}
       aria-label="Open AI assistant"
     >
       <IconGlyph kind="ai" className="h-6 w-6" />

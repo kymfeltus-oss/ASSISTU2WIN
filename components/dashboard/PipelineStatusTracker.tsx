@@ -1,7 +1,6 @@
 "use client";
 
 import { CARD_NORMAL } from "@/components/dashboard/AgentCommandShell";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 type PipelineStageVisual = {
@@ -67,48 +66,42 @@ export function PipelineStatusTracker() {
       <h2 className="mt-1 text-lg font-bold text-[color:var(--text-primary)]">
         Buyer funnel
       </h2>
-      <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto pb-1">
-        {STAGES.map((stage, index) => (
-          <div key={stage.label} className="flex min-w-0 items-stretch">
-            <Link
-              href={stage.href}
-              className="flex min-w-[160px] flex-col rounded-xl border p-4 transition duration-300 ease-in-out hover:-translate-y-1 hover:scale-[1.02]"
+      <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        {STAGES.map((stage) => (
+          <Link
+            key={stage.label}
+            href={stage.href}
+            className="flex min-w-0 flex-col rounded-xl border p-4 transition duration-300 ease-in-out hover:-translate-y-1 hover:scale-[1.02]"
+            style={{
+              background: stage.gradient,
+              borderColor: stage.borderColor,
+              boxShadow: CARD_SHADOW,
+            }}
+          >
+            <p className="text-[10px] font-semibold tracking-[0.08em] text-[color:var(--text-muted)] uppercase">
+              {stage.label}
+            </p>
+            <p
+              className="mt-2 text-[clamp(1.5rem,4vw,2rem)] leading-none font-extrabold"
               style={{
-                background: stage.gradient,
-                borderColor: stage.borderColor,
-                boxShadow: CARD_SHADOW,
+                background: stage.textGradient,
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
               }}
             >
-              <p className="text-[10px] font-semibold tracking-[0.08em] text-[color:var(--text-muted)] uppercase">
-                {stage.label}
-              </p>
-              <p
-                className="mt-2 text-[32px] leading-none font-extrabold"
+              {stage.count}
+            </p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/20" aria-hidden>
+              <div
+                className="h-full rounded-full transition-all duration-300"
                 style={{
+                  width: `${stage.percent}%`,
                   background: stage.textGradient,
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
                 }}
-              >
-                {stage.count}
-              </p>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/20" aria-hidden>
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${stage.percent}%`,
-                    background: stage.textGradient,
-                  }}
-                />
-              </div>
-            </Link>
-            {index < STAGES.length - 1 ? (
-              <div className="flex items-center px-1 text-[color:var(--text-muted)]">
-                <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
-              </div>
-            ) : null}
-          </div>
+              />
+            </div>
+          </Link>
         ))}
       </div>
     </section>

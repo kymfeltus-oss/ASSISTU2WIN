@@ -17,7 +17,7 @@ export function AppBottomNavGate({ children }: AppBottomNavGateProps) {
 
   return (
     <>
-      <div className={showNav ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : undefined}>
+      <div className={showNav ? "app-shell-pad-bottom app-min-w-0" : "app-min-w-0"}>
         {children}
       </div>
       {showNav ? <AssistU2WinBottomNav /> : null}

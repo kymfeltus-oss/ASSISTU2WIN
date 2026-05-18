@@ -23,7 +23,7 @@ export function DashboardUtilityBar() {
       className="sticky top-0 z-20 mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel-alpha)] p-3 backdrop-blur-xl sm:p-4"
       style={{ boxShadow: CARD_SHADOW }}
     >
-      <form onSubmit={handleSearchSubmit} className="flex min-w-[200px] flex-1">
+      <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-1 basis-full sm:basis-[min(100%,12.5rem)]">
         <label className="relative flex w-full max-w-2xl items-center">
           <Sparkles
             className="pointer-events-none absolute left-3 h-4 w-4 text-[color:var(--violet)]"

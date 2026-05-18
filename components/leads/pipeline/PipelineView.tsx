@@ -45,7 +45,7 @@ export function PipelineView() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-24 sm:px-8">
+    <div className="app-page pb-24">
       <section className="mb-8 space-y-2">
         <p className={spatial.label}>Leads pipeline</p>
         <h1 className="text-3xl font-semibold tracking-tight text-white">

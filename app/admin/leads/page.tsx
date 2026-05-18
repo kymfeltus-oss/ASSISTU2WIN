@@ -24,8 +24,8 @@ export default async function AdminLeadsPage() {
   const { leads, errorMessage } = await fetchExecutiveLeads();
 
   return (
-    <div className="min-h-dvh bg-slate-950 p-6 text-slate-200 sm:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-dvh w-full min-w-0 app-overflow-x-clip bg-slate-950 text-slate-200">
+      <div className="app-page space-y-8 py-[var(--app-content-pad-block)]">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-800 pb-6">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.2em] text-[#00F2FE] uppercase">

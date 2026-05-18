@@ -19,7 +19,7 @@ export const CARD_FEATURED =
 
 /** Transparent shell so root `body` gradient (--bg-canvas) shows through. */
 export const APP_SHELL_BG =
-  "relative min-h-dvh w-full overflow-x-hidden bg-transparent text-[color:var(--text-primary)]";
+  "relative min-h-0 w-full min-w-0 app-overflow-x-clip bg-transparent text-[color:var(--text-primary)]";
 
 export const MUTED = "text-[color:var(--text-muted)]";
 
@@ -27,17 +27,17 @@ export const SECTION_HEADING =
   "text-[10px] font-semibold tracking-[0.18em] text-[color:var(--text-muted)] uppercase sm:text-[11px]";
 
 export const PAGE_CONTAINER =
-  "mx-auto w-full max-w-[1600px] px-4 pt-3 pb-4 sm:px-5 md:px-6 md:pb-4 lg:px-8 lg:pt-4 lg:pb-6";
+  "app-page box-border w-full min-w-0 pt-[var(--app-content-pad-block)] pb-[var(--app-content-pad-block)]";
 
 export const APP_GRID =
-  "grid w-full min-w-0 grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(0,360px)] lg:items-start";
+  "grid w-full min-w-0 grid-cols-1 gap-[var(--app-gap-lg)] lg:grid-cols-[var(--app-rail-width)_minmax(0,1fr)_minmax(0,min(100%,var(--app-right-rail-width)))] lg:items-start";
 
 /** Main + right rail only — use inside `DashboardAppShell` (left app rail is in the layout). */
 export const APP_MAIN_GRID =
-  "grid w-full min-w-0 grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start";
+  "grid w-full min-w-0 grid-cols-1 gap-[var(--app-gap-lg)] lg:grid-cols-[minmax(0,1fr)_minmax(0,min(100%,var(--app-right-rail-width)))] lg:items-start";
 
 export const SECTION_GRID =
-  "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4";
+  "grid min-w-0 grid-cols-1 gap-[var(--app-gap)] sm:grid-cols-2 md:gap-[var(--app-gap-lg)]";
 
 export const PANEL =
   "panel min-w-0 overflow-visible rounded-2xl p-4 sm:p-5";
@@ -144,7 +144,7 @@ function IconGlyph({
 export function AppRail({ pathname }: { readonly pathname: string }) {
   return (
     <aside
-      className="hidden min-w-0 flex-col rounded-2xl border border-[#1E2A44] bg-[#050713]/95 px-3 py-4 backdrop-blur-xl sm:px-4 lg:flex lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:self-start"
+      className="hidden min-w-0 flex-col rounded-2xl border border-[#1E2A44] bg-[#050713]/95 px-3 py-4 backdrop-blur-xl sm:px-4 lg:flex lg:sticky lg:top-[var(--app-sticky-offset)] lg:max-h-[var(--app-sticky-max-height)] lg:self-start lg:overflow-y-auto lg:overflow-x-clip"
       aria-label="App navigation"
     >
       <div className="mb-6 flex items-center gap-3">

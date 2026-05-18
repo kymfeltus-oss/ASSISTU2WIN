@@ -23,7 +23,7 @@ export function DashboardAppShell({ children }: DashboardAppShellProps) {
         aria-hidden
       />
       <div className={PAGE_CONTAINER}>
-        <div className="grid w-full min-w-0 grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-[var(--app-gap-lg)] lg:grid-cols-[var(--app-rail-width)_minmax(0,1fr)] lg:items-start">
           <div className="print:hidden">
             <AppRail pathname={pathname} />
           </div>

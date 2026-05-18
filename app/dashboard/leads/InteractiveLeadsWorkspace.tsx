@@ -876,7 +876,7 @@ export function InteractiveLeadsWorkspace() {
           </div>
 
           <aside
-            className={`fixed top-0 right-0 z-50 flex h-full w-full flex-col justify-between overflow-y-auto border-l border-[#1E293B] bg-[#0A0E1A] p-6 transition-transform duration-300 md:static md:w-[440px] md:translate-x-0 md:p-8 ${
+            className={`fixed top-0 right-0 z-50 flex h-full w-full min-w-0 flex-col justify-between overflow-y-auto overflow-x-clip border-l border-[#1E293B] bg-[#0A0E1A] p-[var(--app-content-pad-inline)] transition-transform duration-300 md:static md:w-full md:max-w-[var(--app-right-rail-width)] md:shrink-0 md:basis-[var(--app-right-rail-width)] md:translate-x-0 md:p-8 ${
               isMobileDrawerOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >

@@ -41,7 +41,7 @@ export function CommandCenterView() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-10 px-4 pb-20 sm:px-8">
+    <div className="app-page space-y-10 pb-20">
       {statusMessage ? (
         <p className="text-center text-xs text-cyan-300/90">{statusMessage}</p>
       ) : null}
