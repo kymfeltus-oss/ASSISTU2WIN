@@ -10,6 +10,10 @@ import {
   type LeadOperationalHurdles,
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
+import {
+  isIntakePipelineStatus,
+  type IntakePipelineStatus,
+} from "@/lib/leads/intake-pipeline-status";
 import { type LeadStatus, type LoanType } from "@/lib/leads/types";
 
 export type ManualLeadIntakeBody = {
@@ -41,8 +45,6 @@ export type ManualLeadIntakeFailure = {
   readonly message: string;
 };
 
-const INTAKE_STATUSES = ["New Lead", "Pre-Approved"] as const satisfies readonly LeadStatus[];
-
 const INTAKE_LOAN_TYPES = ["Conventional", "FHA", "Cash"] as const satisfies readonly LoanType[];
 
 export function parseManualLeadIntakeBody(body: unknown): ManualLeadIntakeBody | null {
@@ -64,9 +66,10 @@ export function parseManualLeadIntakeBody(body: unknown): ManualLeadIntakeBody |
   if (leadName.length === 0 || leadSource.length === 0 || targetBudget === null) {
     return null;
   }
-  if (!INTAKE_STATUSES.includes(currentStatus as (typeof INTAKE_STATUSES)[number])) {
+  if (!isIntakePipelineStatus(currentStatus)) {
     return null;
   }
+  const intakeStatus: IntakePipelineStatus = currentStatus;
   if (!INTAKE_LOAN_TYPES.includes(loanType as (typeof INTAKE_LOAN_TYPES)[number])) {
     return null;
   }
@@ -101,7 +104,7 @@ export function parseManualLeadIntakeBody(body: unknown): ManualLeadIntakeBody |
     leadName,
     leadSource,
     targetBudget,
-    currentStatus: currentStatus as LeadStatus,
+    currentStatus: intakeStatus,
     phoneNumber,
     emailAddress,
     loanType: loanType as LoanType,

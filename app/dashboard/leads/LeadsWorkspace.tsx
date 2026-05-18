@@ -42,6 +42,12 @@ function statusBadgeClass(status: string): string {
   switch (status) {
     case "Pre-Approved":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+    case "Cash":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+    case "Denied":
+      return "border-rose-500/30 bg-rose-500/10 text-rose-300";
+    case "No Pre-Approval":
+      return "border-blue-500/30 bg-blue-500/10 text-blue-300";
     case "Active Searching":
       return "border-amber-500/30 bg-amber-500/10 text-amber-300";
     case "Under Contract":

@@ -74,6 +74,14 @@ export function computePotentialBuyerIndex(
 
   if (status === "Pre-Approved" && isImmediateTimeline(timeline)) {
     score = 95;
+  } else if (status === "Cash" && isImmediateTimeline(timeline)) {
+    score = 90;
+  } else if (status === "Cash") {
+    score = 85;
+  } else if (status === "Denied") {
+    score = 30;
+  } else if (status === "No Pre-Approval") {
+    score = 45;
   } else if (status === "Active Searching" || timeline === "1-3 Months") {
     score = 75;
   } else if (status === "New Lead" || timeline === "Just Browsing") {

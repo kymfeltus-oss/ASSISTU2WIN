@@ -26,6 +26,9 @@ type LeadMetricsRow = {
 const LEAD_STATUS_TO_DEAL_STAGE: Readonly<Record<LeadStatus, DealStage>> = {
   "New Lead": "INTAKE",
   "Pre-Approved": "PRE_APPROVAL",
+  Denied: "INTAKE",
+  "No Pre-Approval": "INTAKE",
+  Cash: "PRE_APPROVAL",
   "Active Searching": "HOME_SHOPPING",
   "Under Contract": "UNDER_CONTRACT",
   Closed: "CLOSING_ROOM",

@@ -10,6 +10,12 @@ import {
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
 import {
+  hasVerifiedPreApprovalForIntakeStatus,
+  INTAKE_PIPELINE_STATUS_OPTIONS,
+  shouldDefaultLoanTypeToCash,
+  type IntakePipelineStatus,
+} from "@/lib/leads/intake-pipeline-status";
+import {
   coerceLeadRow,
   LEAD_STATUSES,
   type LeadRecord,
@@ -30,8 +36,6 @@ import {
 type ActiveTab = "intake" | "pipeline" | "analysis";
 
 type IntakeLoanOption = Extract<LoanType, "Conventional" | "FHA" | "Cash">;
-
-type IntakeStatusOption = Extract<LeadStatus, "New Lead" | "Pre-Approved">;
 
 const LEAD_SOURCE_OPTIONS = [
   "Referral",
@@ -54,11 +58,6 @@ const INTAKE_LOAN_OPTIONS: readonly IntakeLoanOption[] = [
   "Conventional",
   "FHA",
   "Cash",
-];
-
-const INTAKE_STATUS_OPTIONS: readonly IntakeStatusOption[] = [
-  "New Lead",
-  "Pre-Approved",
 ];
 
 const FOLLOWUP_DELAY_OPTIONS = [
@@ -102,7 +101,8 @@ export function InteractiveLeadsWorkspace() {
   const [buyerSource, setBuyerSource] = useState<LeadSourceOption>("Referral");
   const [buyerBudget, setBuyerBudget] = useState(450_000);
   const [loanType, setLoanType] = useState<IntakeLoanOption>("Conventional");
-  const [initialStatus, setInitialStatus] = useState<IntakeStatusOption>("New Lead");
+  const [initialStatus, setInitialStatus] =
+    useState<IntakePipelineStatus>("No Pre-Approval");
   const [phoneContact, setPhoneContact] = useState("");
   const [emailContact, setEmailContact] = useState("");
   const [followupDelay, setFollowupDelay] = useState<FollowupDelayDays>(0);
@@ -119,7 +119,7 @@ export function InteractiveLeadsWorkspace() {
   const [selectedZipCode, setSelectedZipCode] = useState("75024");
   const [generatedReportLink, setGeneratedReportLink] = useState<string | null>(null);
 
-  const [editStatus, setEditStatus] = useState<LeadStatus>("New Lead");
+  const [editStatus, setEditStatus] = useState<LeadStatus>("No Pre-Approval");
   const [editBudget, setEditBudget] = useState(450_000);
   const [editTimeline, setEditTimeline] = useState<PurchaseTimeline>("1-3 Months");
   const [editFirstTime, setEditFirstTime] = useState(false);
@@ -134,6 +134,13 @@ export function InteractiveLeadsWorkspace() {
     }),
     [hurdleLender, hurdleHomeSale, hurdleDownPayment],
   );
+
+  useEffect(() => {
+    setHasPreApproval(hasVerifiedPreApprovalForIntakeStatus(initialStatus));
+    if (shouldDefaultLoanTypeToCash(initialStatus)) {
+      setLoanType("Cash");
+    }
+  }, [initialStatus]);
 
   const intakePotentialIndex = useMemo(
     () =>
@@ -226,7 +233,8 @@ export function InteractiveLeadsWorkspace() {
           loanType,
           followupDelayDays: followupDelay,
           isFirstTimeBuyer: isFirstTime,
-          hasVerifiedPreApproval: hasPreApproval,
+          hasVerifiedPreApproval:
+            hasPreApproval || hasVerifiedPreApprovalForIntakeStatus(initialStatus),
           purchaseTimeline,
           manualNotes: manualNotes.trim() || null,
         }),
@@ -686,18 +694,18 @@ export function InteractiveLeadsWorkspace() {
                     Status
                   </label>
                   <div className="grid grid-cols-2 gap-1">
-                    {INTAKE_STATUS_OPTIONS.map((status) => (
+                    {INTAKE_PIPELINE_STATUS_OPTIONS.map((option) => (
                       <button
-                        key={status}
+                        key={option.value}
                         type="button"
-                        onClick={() => setInitialStatus(status)}
+                        onClick={() => setInitialStatus(option.value)}
                         className={`rounded-lg border py-2 text-[11px] font-bold transition-all ${
-                          initialStatus === status
+                          initialStatus === option.value
                             ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
                             : "border-[#1E293B] bg-[#070B16] text-[#64748B]"
                         }`}
                       >
-                        {status}
+                        {option.label}
                       </button>
                     ))}
                   </div>

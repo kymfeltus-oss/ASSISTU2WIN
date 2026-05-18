@@ -44,7 +44,8 @@ export function getFollowUpLeads(leads: readonly LeadRecord[]): readonly LeadRec
       (lead) =>
         !lead.has_verified_pre_approval ||
         lead.ai_extracted_preferences.hurdle_lender ||
-        lead.current_status === "New Lead",
+        lead.current_status === "New Lead" ||
+        lead.current_status === "No Pre-Approval",
     )
     .slice(0, 5);
 }

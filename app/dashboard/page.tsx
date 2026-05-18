@@ -181,7 +181,13 @@ function hasAnyInsight(insights: CommandInsights): boolean {
 }
 
 function bucketStatus(status: LeadStatus): "new" | "active" | "closed" {
-  if (status === "New Lead") return "new";
+  if (
+    status === "New Lead" ||
+    status === "No Pre-Approval" ||
+    status === "Denied"
+  ) {
+    return "new";
+  }
   if (status === "Closed") return "closed";
   return "active";
 }

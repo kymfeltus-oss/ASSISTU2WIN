@@ -21,12 +21,17 @@ import {
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
 import { adminIntakeFormToRequestBody } from "@/lib/leads/admin-intake-fields";
-import type { LeadStatus, LoanType } from "@/lib/leads/types";
+import {
+  hasVerifiedPreApprovalForIntakeStatus,
+  INTAKE_PIPELINE_STATUS_OPTIONS,
+  shouldDefaultLoanTypeToCash,
+  type IntakePipelineStatus,
+} from "@/lib/leads/intake-pipeline-status";
+import type { LoanType } from "@/lib/leads/types";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 type IntakeLoan = Extract<LoanType, "Conventional" | "FHA" | "Cash">;
-type IntakeStatus = Extract<LeadStatus, "New Lead" | "Pre-Approved">;
 
 const SOURCES = [
   "Referral",
@@ -44,7 +49,8 @@ export function AddBuyerView() {
   const [buyerSource, setBuyerSource] = useState<(typeof SOURCES)[number]>("Referral");
   const [buyerBudget, setBuyerBudget] = useState(450_000);
   const [loanType, setLoanType] = useState<IntakeLoan>("Conventional");
-  const [initialStatus, setInitialStatus] = useState<IntakeStatus>("New Lead");
+  const [initialStatus, setInitialStatus] =
+    useState<IntakePipelineStatus>("No Pre-Approval");
   const [phoneContact, setPhoneContact] = useState("");
   const [emailContact, setEmailContact] = useState("");
   const [purchaseTimeline, setPurchaseTimeline] =
@@ -55,6 +61,13 @@ export function AddBuyerView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [extended, setExtended] = useState(createEmptyAdminIntakeExtendedState);
+
+  useEffect(() => {
+    setHasPreApproval(hasVerifiedPreApprovalForIntakeStatus(initialStatus));
+    if (shouldDefaultLoanTypeToCash(initialStatus)) {
+      setLoanType("Cash");
+    }
+  }, [initialStatus]);
 
   const readiness = useMemo(
     () =>
@@ -88,7 +101,8 @@ export function AddBuyerView() {
           loanType,
           followupDelayDays: 0,
           isFirstTimeBuyer: isFirstTime,
-          hasVerifiedPreApproval: hasPreApproval,
+          hasVerifiedPreApproval:
+            hasPreApproval || hasVerifiedPreApprovalForIntakeStatus(initialStatus),
           purchaseTimeline,
           manualNotes: manualNotes.trim() || null,
           ...adminIntakeFormToRequestBody(extended),
@@ -162,9 +176,16 @@ export function AddBuyerView() {
                   </option>
                 ))}
               </IntakeSelect>
-              <IntakeSelect label="Pipeline status" value={initialStatus} onChange={(v) => setInitialStatus(v as IntakeStatus)}>
-                <option value="New Lead">New Lead</option>
-                <option value="Pre-Approved">Pre-Approved</option>
+              <IntakeSelect
+                label="Pipeline status"
+                value={initialStatus}
+                onChange={(v) => setInitialStatus(v as IntakePipelineStatus)}
+              >
+                {INTAKE_PIPELINE_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </IntakeSelect>
               <IntakeField label="Phone" type="tel" value={phoneContact} onChange={setPhoneContact} />
               <IntakeField label="Email" type="email" value={emailContact} onChange={setEmailContact} />

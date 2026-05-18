@@ -2,6 +2,9 @@
 export const LEAD_STATUSES = [
   "New Lead",
   "Pre-Approved",
+  "Denied",
+  "No Pre-Approval",
+  "Cash",
   "Active Searching",
   "Under Contract",
   "Closed",

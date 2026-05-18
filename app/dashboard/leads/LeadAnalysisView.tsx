@@ -116,7 +116,9 @@ function isConversionRisk(lead: LeadRecord): boolean {
   if (!isActiveLead(lead)) return false;
   return (
     (lead.market_readiness_score >= 70 && !lead.has_verified_pre_approval) ||
-    (lead.current_status === "New Lead" && lead.market_readiness_score >= 50)
+    ((lead.current_status === "New Lead" ||
+      lead.current_status === "No Pre-Approval") &&
+      lead.market_readiness_score >= 50)
   );
 }
 
@@ -232,12 +234,19 @@ function buildFinancingRows(leads: readonly LeadRecord[], total: number): readon
 }
 
 function buildConversionFunnel(leads: readonly LeadRecord[], total: number): readonly MetricRow[] {
-  const prospect = leads.filter((l) => l.current_status === "New Lead").length;
+  const prospect = leads.filter(
+    (l) =>
+      l.current_status === "New Lead" ||
+      l.current_status === "No Pre-Approval" ||
+      l.current_status === "Denied",
+  ).length;
   const potential = leads.filter(
     (l) => l.current_status === "Pre-Approved" && l.market_readiness_score < 70,
   ).length;
   const qualified = leads.filter(
-    (l) => l.current_status === "Pre-Approved" && l.market_readiness_score >= 70,
+    (l) =>
+      l.current_status === "Cash" ||
+      (l.current_status === "Pre-Approved" && l.market_readiness_score >= 70),
   ).length;
   const activeClient = leads.filter((l) => l.current_status === "Active Searching").length;
   const underContract = leads.filter((l) => l.current_status === "Under Contract").length;
@@ -512,13 +521,15 @@ export function useLeadAnalysisMetrics(leads: readonly LeadRecord[]): LeadAnalys
         label: "New intake with no agent response",
         count: activeLeads.filter(
           (l) =>
-            l.current_status === "New Lead" &&
+            (l.current_status === "New Lead" ||
+              l.current_status === "No Pre-Approval") &&
             l.buyer_engagement_count === 0 &&
             hoursSince(l.created_at) <= 48,
         ).length,
         leads: activeLeads.filter(
           (l) =>
-            l.current_status === "New Lead" &&
+            (l.current_status === "New Lead" ||
+              l.current_status === "No Pre-Approval") &&
             l.buyer_engagement_count === 0 &&
             hoursSince(l.created_at) <= 48,
         ),
