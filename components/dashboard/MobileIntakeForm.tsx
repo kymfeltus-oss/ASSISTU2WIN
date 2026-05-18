@@ -9,7 +9,12 @@ import {
   type MobileRoadblock,
   type MobileUrgency,
 } from "@/lib/leads/mobile-intake-score";
-import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads/types";
+import {
+  hasVerifiedPreApprovalForIntakeStatus,
+  INTAKE_PIPELINE_STATUS_OPTIONS,
+  shouldDefaultLoanTypeToCash,
+  type IntakePipelineStatus,
+} from "@/lib/leads/intake-pipeline-status";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -27,7 +32,7 @@ type MobileIntakeFormState = {
   readonly budget: string;
   readonly financing: MobileFinancing;
   readonly urgency: MobileUrgency;
-  readonly milestone: LeadStatus;
+  readonly milestone: IntakePipelineStatus;
   readonly isFirstTimeBuyer: boolean;
   readonly hasVerifiedPreApproval: boolean;
   readonly selectedRoadblocks: readonly MobileRoadblock[];
@@ -41,7 +46,7 @@ const INITIAL_FORM: MobileIntakeFormState = {
   budget: "",
   financing: "Conventional",
   urgency: "Medium",
-  milestone: "New Lead",
+  milestone: "No Pre-Approval",
   isFirstTimeBuyer: false,
   hasVerifiedPreApproval: false,
   selectedRoadblocks: [],
@@ -410,16 +415,38 @@ export function MobileIntakeForm() {
       </div>
 
       <div className="w-full space-y-2">
-        <span className={microLabelClass}>Pipeline milestone</span>
-        <PillSelector
-          options={LEAD_STATUSES}
-          value={form.milestone}
-          onChange={(milestone) =>
-            setForm((current) => ({ ...current, milestone }))
-          }
-          columns={2}
-          compact
-        />
+        <span className={microLabelClass}>Pipeline status</span>
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-800/80 bg-slate-900/60 p-2">
+          {INTAKE_PIPELINE_STATUS_OPTIONS.map((option) => {
+            const isActive = form.milestone === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setForm((current) => ({
+                    ...current,
+                    milestone: option.value,
+                    hasVerifiedPreApproval: hasVerifiedPreApprovalForIntakeStatus(
+                      option.value,
+                    ),
+                    financing: shouldDefaultLoanTypeToCash(option.value)
+                      ? "Cash"
+                      : current.financing,
+                  }))
+                }
+                className={cn(
+                  "rounded-lg border px-2 py-2.5 text-center text-[11px] leading-tight font-medium transition-all duration-200 active:scale-[0.98]",
+                  isActive
+                    ? "border-emerald-500/50 bg-emerald-600/20 text-emerald-400 shadow-[0_0_20px_-6px_rgba(16,185,129,0.45)]"
+                    : "border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-600 hover:text-slate-200",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
