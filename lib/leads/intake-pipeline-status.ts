@@ -16,7 +16,7 @@ export const INTAKE_PIPELINE_STATUS_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "Pre-Approved", label: "Pre-Approved" },
   { value: "Denied", label: "Denied" },
-  { value: "No Pre-Approval", label: "No pre approval" },
+  { value: "No Pre-Approval", label: "No Pre-Approval" },
   { value: "Cash", label: "Cash" },
 ] as const;
 

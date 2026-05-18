@@ -85,15 +85,34 @@ export function AdminIntakeExtendedFields({
     <div className="flex min-w-0 flex-col gap-3 md:gap-4">
       <IntakeSection title="Co-Buyer Information">
         <IntakeTwoCol>
-          <IntakeField label="Co-buyer name" value={state.coBuyerName} onChange={(v) => onChange({ coBuyerName: v })} />
+          <IntakeField
+            label="Co-buyer name"
+            value={state.coBuyerName}
+            onChange={(v) => onChange({ coBuyerName: v })}
+            wordFormat="proper-words"
+          />
           <IntakeField
             label="Relationship"
             value={state.coBuyerRelationship}
             onChange={(v) => onChange({ coBuyerRelationship: v })}
+            wordFormat="proper-words"
             placeholder="Spouse, partner…"
           />
-          <IntakeField label="Co-buyer email" type="email" value={state.coBuyerEmail} onChange={(v) => onChange({ coBuyerEmail: v })} />
-          <IntakeField label="Co-buyer phone" type="tel" value={state.coBuyerPhone} onChange={(v) => onChange({ coBuyerPhone: v })} />
+          <IntakeField
+            label="Co-buyer email"
+            type="email"
+            value={state.coBuyerEmail}
+            onChange={(v) => onChange({ coBuyerEmail: v })}
+            wordFormat="email"
+          />
+          <IntakeField
+            label="Co-buyer phone"
+            type="tel"
+            value={state.coBuyerPhone}
+            onChange={(v) => onChange({ coBuyerPhone: v })}
+            wordFormat="phone"
+            placeholder="555-555-0100"
+          />
         </IntakeTwoCol>
       </IntakeSection>
 
@@ -104,12 +123,28 @@ export function AdminIntakeExtendedFields({
               label="Lead source (other)"
               value={state.leadSourceOther}
               onChange={(v) => onChange({ leadSourceOther: v })}
+              wordFormat="proper-words"
             />
           ) : null}
-          <IntakeField label="Street address" value={state.streetAddress} onChange={(v) => onChange({ streetAddress: v })} />
+          <IntakeField
+            label="Street address"
+            value={state.streetAddress}
+            onChange={(v) => onChange({ streetAddress: v })}
+            wordFormat="proper-words"
+          />
           <IntakeTwoCol>
-            <IntakeField label="City" value={state.city} onChange={(v) => onChange({ city: v })} />
-            <IntakeField label="State" value={state.state} onChange={(v) => onChange({ state: v })} />
+            <IntakeField
+              label="City"
+              value={state.city}
+              onChange={(v) => onChange({ city: v })}
+              wordFormat="proper-words"
+            />
+            <IntakeField
+              label="State"
+              value={state.state}
+              onChange={(v) => onChange({ state: v })}
+              wordFormat="state"
+            />
             <IntakeField label="Zip code" value={state.zipCode} onChange={(v) => onChange({ zipCode: v })} />
             <IntakeSelect
               label="Current housing"
@@ -143,8 +178,18 @@ export function AdminIntakeExtendedFields({
           </IntakeSelect>
           <IntakeField label="Down payment ($)" type="number" value={state.downPaymentAmount} onChange={(v) => onChange({ downPaymentAmount: v })} />
           <IntakeField label="Monthly comfort ($)" type="number" value={state.monthlyPaymentComfort} onChange={(v) => onChange({ monthlyPaymentComfort: v })} />
-          <IntakeField label="Employment" value={state.employmentStatus} onChange={(v) => onChange({ employmentStatus: v })} />
-          <IntakeField label="Lender name" value={state.lenderName} onChange={(v) => onChange({ lenderName: v })} />
+          <IntakeField
+            label="Employment"
+            value={state.employmentStatus}
+            onChange={(v) => onChange({ employmentStatus: v })}
+            wordFormat="proper-words"
+          />
+          <IntakeField
+            label="Lender name"
+            value={state.lenderName}
+            onChange={(v) => onChange({ lenderName: v })}
+            wordFormat="proper-words"
+          />
         </IntakeTwoCol>
       </IntakeSection>
 
@@ -164,6 +209,7 @@ export function AdminIntakeExtendedFields({
             label="Contact window"
             value={state.preferredContactWindow}
             onChange={(v) => onChange({ preferredContactWindow: v })}
+            wordFormat="proper-words"
             placeholder="Morning, evenings…"
           />
           <div className="space-y-2 sm:col-span-2">
@@ -202,6 +248,7 @@ export function AdminIntakeExtendedFields({
             label="Communication notes"
             value={state.customCommunicationNotes}
             onChange={(v) => onChange({ customCommunicationNotes: v })}
+            wordFormat="sentence"
             rows={2}
             className="sm:col-span-2"
           />
@@ -214,6 +261,7 @@ export function AdminIntakeExtendedFields({
             label="Follow-up frequency"
             value={state.followUpFrequency}
             onChange={(v) => onChange({ followUpFrequency: v })}
+            wordFormat="proper-words"
             placeholder="Weekly, bi-weekly…"
           />
           <IntakeField

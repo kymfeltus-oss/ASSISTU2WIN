@@ -1,6 +1,10 @@
 "use client";
 
 import { adminIntakeTheme } from "@/components/leads/intake/admin-intake-theme";
+import {
+  applyIntakeWordFormat,
+  type IntakeWordFormat,
+} from "@/lib/format/proper-text";
 import type { ReactNode } from "react";
 
 export function IntakeSection({
@@ -43,6 +47,7 @@ export function IntakeField({
   placeholder,
   className = "",
   required = false,
+  wordFormat,
 }: {
   readonly label: string;
   readonly value: string;
@@ -51,6 +56,7 @@ export function IntakeField({
   readonly placeholder?: string;
   readonly className?: string;
   readonly required?: boolean;
+  readonly wordFormat?: IntakeWordFormat;
 }) {
   return (
     <label className={`block min-w-0 ${className}`}>
@@ -60,7 +66,7 @@ export function IntakeField({
         value={value}
         required={required}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(applyIntakeWordFormat(e.target.value, wordFormat))}
         className={adminIntakeTheme.input}
       />
     </label>
@@ -101,6 +107,7 @@ export function IntakeTextarea({
   placeholder,
   rows = 3,
   className = "",
+  wordFormat,
 }: {
   readonly label: string;
   readonly value: string;
@@ -108,6 +115,7 @@ export function IntakeTextarea({
   readonly placeholder?: string;
   readonly rows?: number;
   readonly className?: string;
+  readonly wordFormat?: IntakeWordFormat;
 }) {
   return (
     <label className={`block min-w-0 ${className}`}>
@@ -116,7 +124,7 @@ export function IntakeTextarea({
         value={value}
         rows={rows}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(applyIntakeWordFormat(e.target.value, wordFormat))}
         className={adminIntakeTheme.textarea}
       />
     </label>

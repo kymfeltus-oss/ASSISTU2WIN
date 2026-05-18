@@ -15,6 +15,8 @@ import {
   shouldDefaultLoanTypeToCash,
   type IntakePipelineStatus,
 } from "@/lib/leads/intake-pipeline-status";
+import { formatProperWordsInput, formatEmailInput } from "@/lib/format/proper-text";
+import { formatUsPhoneInput, usPhoneDigitsOnly } from "@/lib/format/us-phone";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -203,7 +205,7 @@ export function MobileIntakeForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const trimmedName = form.name.trim();
+    const trimmedName = formatProperWordsInput(form.name.trim());
     if (!trimmedName) {
       setStatus("error");
       setErrorMessage("Lead / Client Name is required.");
@@ -245,7 +247,10 @@ export function MobileIntakeForm() {
         profile_id: user.id,
         lead_name: trimmedName,
         lead_source: MOBILE_LEAD_SOURCE,
-        phone_number: form.phone.trim() || null,
+        phone_number: (() => {
+          const digits = usPhoneDigitsOnly(form.phone);
+          return digits.length > 0 ? formatUsPhoneInput(digits) : null;
+        })(),
         email_address: form.email.trim() || null,
         target_budget: parsedBudget,
         loan_type: form.financing,
@@ -313,7 +318,10 @@ export function MobileIntakeForm() {
             required
             value={form.name}
             onChange={(event) =>
-              setForm((current) => ({ ...current, name: event.target.value }))
+              setForm((current) => ({
+                ...current,
+                name: formatProperWordsInput(event.target.value),
+              }))
             }
             className={fieldClassName}
             autoComplete="name"
@@ -330,11 +338,15 @@ export function MobileIntakeForm() {
             type="tel"
             value={form.phone}
             onChange={(event) =>
-              setForm((current) => ({ ...current, phone: event.target.value }))
+              setForm((current) => ({
+                ...current,
+                phone: formatUsPhoneInput(event.target.value),
+              }))
             }
             className={fieldClassName}
             autoComplete="tel"
-            placeholder="(555) 555-0100"
+            inputMode="tel"
+            placeholder="555-555-0100"
           />
         </div>
 
@@ -347,7 +359,10 @@ export function MobileIntakeForm() {
             type="email"
             value={form.email}
             onChange={(event) =>
-              setForm((current) => ({ ...current, email: event.target.value }))
+              setForm((current) => ({
+                ...current,
+                email: formatEmailInput(event.target.value),
+              }))
             }
             className={fieldClassName}
             autoComplete="email"

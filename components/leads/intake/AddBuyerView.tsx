@@ -21,6 +21,8 @@ import {
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
 import { adminIntakeFormToRequestBody } from "@/lib/leads/admin-intake-fields";
+import { formatUsPhoneInput, usPhoneDigitsOnly } from "@/lib/format/us-phone";
+import { formatProperWordsInput } from "@/lib/format/proper-text";
 import {
   hasVerifiedPreApprovalForIntakeStatus,
   INTAKE_PIPELINE_STATUS_OPTIONS,
@@ -92,11 +94,14 @@ export function AddBuyerView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leadName: trimmedName,
+          leadName: formatProperWordsInput(trimmedName),
           leadSource: buyerSource,
           targetBudget: buyerBudget,
           currentStatus: initialStatus,
-          phoneNumber: phoneContact.trim() || null,
+          phoneNumber: (() => {
+            const digits = usPhoneDigitsOnly(phoneContact);
+            return digits.length > 0 ? formatUsPhoneInput(digits) : null;
+          })(),
           emailAddress: emailContact.trim() || null,
           loanType,
           followupDelayDays: 0,
@@ -166,6 +171,7 @@ export function AddBuyerView() {
                 label="Lead / Client Name"
                 value={buyerName}
                 onChange={setBuyerName}
+                wordFormat="proper-words"
                 required
                 className="sm:col-span-2"
               />
@@ -187,8 +193,21 @@ export function AddBuyerView() {
                   </option>
                 ))}
               </IntakeSelect>
-              <IntakeField label="Phone" type="tel" value={phoneContact} onChange={setPhoneContact} />
-              <IntakeField label="Email" type="email" value={emailContact} onChange={setEmailContact} />
+              <IntakeField
+                label="Phone"
+                type="tel"
+                value={phoneContact}
+                onChange={setPhoneContact}
+                wordFormat="phone"
+                placeholder="555-555-0100"
+              />
+              <IntakeField
+                label="Email"
+                type="email"
+                value={emailContact}
+                onChange={setEmailContact}
+                wordFormat="email"
+              />
             </IntakeTwoCol>
 
             <div className={`${adminIntakeTheme.innerWell} mt-3`}>
@@ -242,6 +261,7 @@ export function AddBuyerView() {
               label="Latest touchpoint / conversation log"
               value={manualNotes}
               onChange={setManualNotes}
+              wordFormat="sentence"
               placeholder="Lease end, relocation, schools, lender notes…"
               className="mt-3"
             />
