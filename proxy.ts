@@ -74,6 +74,9 @@ export async function proxy(request: NextRequest) {
   const isPublicLeadIntake =
     request.nextUrl.pathname === "/api/leads/public-intake";
   const isPublicIntakePage = request.nextUrl.pathname.startsWith("/intake");
+  const isPublicScanPage = request.nextUrl.pathname.startsWith("/scan");
+  const isPublicDownloadAppPage =
+    request.nextUrl.pathname.startsWith("/download-app");
   const isPublicAsset =
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname.includes(".");
@@ -84,7 +87,9 @@ export async function proxy(request: NextRequest) {
     !isPublicAsset &&
     !isCopilotIntakeWebhook &&
     !isPublicLeadIntake &&
-    !isPublicIntakePage
+    !isPublicIntakePage &&
+    !isPublicScanPage &&
+    !isPublicDownloadAppPage
   ) {
     const redirectResponse = NextResponse.redirect(
       new URL("/login", request.url),

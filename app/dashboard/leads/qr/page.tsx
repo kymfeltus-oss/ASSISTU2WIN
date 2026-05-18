@@ -1,3 +1,4 @@
+import { AdminMasterScanUrl } from "@/components/AdminMasterScanUrl";
 import AdminQRGenerator, {
   type QrGeneratorLeadOption,
 } from "@/components/AdminQRGenerator";
@@ -40,6 +41,7 @@ export default async function LeadsQrGeneratorPage() {
           ← Back to intake
         </Link>
       </div>
+      <AdminMasterScanUrl />
       <AdminQRGenerator leads={leads} />
     </div>
   );

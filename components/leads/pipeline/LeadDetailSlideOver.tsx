@@ -270,6 +270,7 @@ export function LeadDetailSlideOver({
                   onSaved({
                     ...lead,
                     welcome_email_enabled: data.welcomeEmailEnabled,
+                    rep_agreement_pending: data.repAgreementPending,
                     preferred_communication_channel: data.preferredCommunicationChannel,
                     preferred_contact_window:
                       data.preferredContactWindow.trim().length > 0

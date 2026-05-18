@@ -1,0 +1,19 @@
+# AssistU2Win — Cursor performance & theme rules
+
+- Always prioritize LCP (Largest Contentful Paint); keep it under 600ms.
+- Avoid global CSS imports beyond `app/globals.css` and route-scoped layouts; prefer Tailwind utilities or colocated styles.
+- Use `display: "swap"` on all `next/font` definitions.
+- Load decorative fonts (e.g. Great Vibes) only on routes that need them — not in the root layout.
+- Use the `afterInteractive` strategy for all non-essential third-party scripts.
+- Public intake / QR flows use the Sanctuary dark theme (`bg-[#0f172a]`, slate borders, muted slate text).
+- Ensure all QR-generated URLs use `NEXT_PUBLIC_APP_URL` via `getPublicAppBaseUrl()` in `@/lib/qr-service`.
+- Use real estate terminology per project core rules (Lead / Client Name, not Opportunity).
+
+
+- Project Name: AssistU2Win
+- Core Focus: Athletic recruitment, eligibility tracking, and parent lead intake.
+- Tech Stack: Next.js, Supabase, Tailwind CSS.
+- Theme: Dark executive (#0f172a), Slate borders, High-end professional.
+- CRITICAL: Never use placeholder domains (e.g., your-domain.com). Always use process.env.NEXT_PUBLIC_APP_URL.
+- Performance: Optimize all images and CSS for mobile QR scans (LCP < 600ms).
+- Database: All leads and athlete data must sync with Supabase 'leads' and 'profiles' tables.

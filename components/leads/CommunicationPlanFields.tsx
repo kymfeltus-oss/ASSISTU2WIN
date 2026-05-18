@@ -101,7 +101,7 @@ export function CommunicationPlanFields({
           {showAutomationToggles ? (
             <>
               <IntakeToggle
-                label="Buyer consultation invite"
+                label="Consultation invite"
                 checked={
                   value.communicationPreferences.buyer_consultation_invite_enabled
                 }
@@ -110,7 +110,7 @@ export function CommunicationPlanFields({
                 }
               />
               <IntakeToggle
-                label="Pre-approval reminder"
+                label="Eligibility reminder"
                 checked={value.communicationPreferences.pre_approval_reminder_enabled}
                 onChange={(checked) =>
                   patchPreference("pre_approval_reminder_enabled", checked)

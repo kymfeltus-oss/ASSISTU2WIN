@@ -1,14 +1,16 @@
 "use client";
 
-import { CommunicationPlanFields } from "@/components/leads/CommunicationPlanFields";
+import { IntakeSuccess } from "@/components/intake/IntakeSuccess";
 import {
   IntakeField,
   IntakeSection,
+  IntakeTextarea,
+  IntakeToggle,
   IntakeTwoCol,
 } from "@/components/leads/intake/admin-intake-ui";
 import { submitPublicLeadIntake } from "@/lib/communication-service";
+import { setLeadIdCookieClient } from "@/lib/scan/lead-cookie-client";
 import { formatUsPhoneInput, usPhoneDigitsOnly } from "@/lib/format/us-phone";
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
 import {
   defaultCommunicationPlanData,
   type CommunicationPlanData,
@@ -17,11 +19,26 @@ import {
   buildQrIntakePrefillNotes,
   parseQrIntakeSearchParams,
 } from "@/lib/qr-service";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
+
+function buildInitialCommPlan(
+  qrParams: ReturnType<typeof parseQrIntakeSearchParams>,
+): CommunicationPlanData {
+  const base = defaultCommunicationPlanData();
+  const prefill = buildQrIntakePrefillNotes(qrParams);
+  return {
+    ...base,
+    welcomeEmailEnabled: true,
+    communicationPreferences: {
+      ...base.communicationPreferences,
+      market_update_email_enabled: qrParams.marketUpdate,
+    },
+    customCommunicationNotes: prefill.length > 0 ? prefill : base.customCommunicationNotes,
+  };
+}
 
 export default function QRIntakeProcessor() {
   const searchParams = useSearchParams();
@@ -34,24 +51,11 @@ export default function QRIntakeProcessor() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [commPlan, setCommPlan] = useState<CommunicationPlanData>(() =>
-    defaultCommunicationPlanData(),
+    buildInitialCommPlan(qrParams),
   );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [submittedLeadId, setSubmittedLeadId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const prefill = buildQrIntakePrefillNotes(qrParams);
-    setCommPlan((prev) => ({
-      ...prev,
-      welcomeEmailEnabled: qrParams.autoWelcome,
-      communicationPreferences: {
-        ...prev.communicationPreferences,
-        market_update_email_enabled: qrParams.marketUpdate,
-      },
-      customCommunicationNotes:
-        prefill.length > 0 ? prefill : prev.customCommunicationNotes,
-    }));
-  }, [qrParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,12 +78,14 @@ export default function QRIntakeProcessor() {
           : undefined,
       optInToUpdates:
         commPlan.communicationPreferences.market_update_email_enabled,
-      welcomeEmailEnabled: commPlan.welcomeEmailEnabled,
+      welcomeEmailEnabled: true,
       campaignId: qrParams.source ?? undefined,
       location: qrParams.location ?? undefined,
     });
 
     if (result.ok) {
+      setLeadIdCookieClient(result.leadId);
+      setSubmittedLeadId(result.leadId);
       setSubmitState("success");
       return;
     }
@@ -88,53 +94,12 @@ export default function QRIntakeProcessor() {
     setErrorMessage(result.message);
   }
 
-  if (submitState === "success") {
-    return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col items-center justify-center gap-4 px-4 py-10">
-        <Image
-          src={BRAND_LOGO_SRC}
-          alt={BRAND_LOGO_ALT}
-          width={160}
-          height={48}
-          className="h-auto w-40 object-contain"
-          priority
-        />
-        <div className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--panel)] p-6 text-center shadow-lg">
-          <h1 className="text-lg font-semibold text-[color:var(--text-primary)]">
-            You&apos;re on the list
-          </h1>
-          <p className="mt-2 text-sm text-[color:var(--text-muted)]">
-            We received your details. Your agent will follow up soon.
-          </p>
-        </div>
-      </div>
-    );
+  if (submitState === "success" && submittedLeadId) {
+    return <IntakeSuccess leadId={submittedLeadId} clientName={name.trim()} />;
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-4 py-8">
-      <header className="flex flex-col items-center gap-3 text-center">
-        <Image
-          src={BRAND_LOGO_SRC}
-          alt={BRAND_LOGO_ALT}
-          width={180}
-          height={54}
-          className="h-auto w-44 object-contain"
-          priority
-        />
-        <div>
-          <h1 className="text-lg font-semibold text-[color:var(--text-primary)]">
-            Start your home search
-          </h1>
-          {qrParams.source ? (
-            <p className="mt-1 text-xs text-[color:var(--text-muted)]">
-              Source: {qrParams.source}
-              {qrParams.location ? ` · ${qrParams.location}` : ""}
-            </p>
-          ) : null}
-        </div>
-      </header>
-
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pb-10">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <IntakeSection title="Your info">
           <IntakeTwoCol>
@@ -166,11 +131,47 @@ export default function QRIntakeProcessor() {
           </IntakeTwoCol>
         </IntakeSection>
 
-        <CommunicationPlanFields
-          value={commPlan}
-          onChange={setCommPlan}
-          variant="public"
-        />
+        <IntakeSection title="Communication preferences">
+          <IntakeTwoCol>
+            <IntakeTextarea
+              label="Communication Notes"
+              value={commPlan.customCommunicationNotes}
+              onChange={(value) =>
+                setCommPlan((current) => ({
+                  ...current,
+                  customCommunicationNotes: value,
+                }))
+              }
+              rows={3}
+              className="sm:col-span-2"
+            />
+            <div className="space-y-2 sm:col-span-2">
+              <IntakeToggle
+                label="Welcome email"
+                checked={commPlan.welcomeEmailEnabled}
+                onChange={(checked) =>
+                  setCommPlan((current) => ({
+                    ...current,
+                    welcomeEmailEnabled: checked,
+                  }))
+                }
+              />
+              <IntakeToggle
+                label="Market update email"
+                checked={commPlan.communicationPreferences.market_update_email_enabled}
+                onChange={(checked) =>
+                  setCommPlan((current) => ({
+                    ...current,
+                    communicationPreferences: {
+                      ...current.communicationPreferences,
+                      market_update_email_enabled: checked,
+                    },
+                  }))
+                }
+              />
+            </div>
+          </IntakeTwoCol>
+        </IntakeSection>
 
         {errorMessage ? (
           <p className="text-sm text-red-400" role="alert">

@@ -1,6 +1,12 @@
 "use client";
 
+import { BottomNavIcon } from "@/components/navigation/BottomNavIcon";
 import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
+import {
+  ASSISTU2WIN_BOTTOM_NAV,
+  isBottomNavItemActive,
+  type BottomNavItem,
+} from "@/lib/navigation/bottom-nav";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -21,7 +27,7 @@ export const SECTION_HEADING =
   "text-[10px] font-semibold tracking-[0.18em] text-[color:var(--text-muted)] uppercase sm:text-[11px]";
 
 export const PAGE_CONTAINER =
-  "mx-auto w-full max-w-[1600px] px-4 pt-3 pb-28 sm:px-5 md:px-6 md:pb-28 lg:px-8 lg:pt-4 lg:pb-8";
+  "mx-auto w-full max-w-[1600px] px-4 pt-3 pb-4 sm:px-5 md:px-6 md:pb-4 lg:px-8 lg:pt-4 lg:pb-6";
 
 export const APP_GRID =
   "grid w-full min-w-0 grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(0,360px)] lg:items-start";
@@ -39,29 +45,14 @@ export const PANEL =
 export const TOUCH_TARGET =
   "min-h-11 min-w-11 touch-manipulation";
 
-type BottomNavItem = {
-  readonly label: string;
-  readonly href: string;
-  readonly icon: "home" | "leads" | "pipeline" | "analytics";
-  readonly match: "exact" | "prefix" | "leads";
-};
-
-const LEADS_ROOT = "/dashboard/leads";
-const PIPELINE_ROOT = "/dashboard/leads/pipeline";
-const ANALYTICS_ROOT = "/dashboard/analytics";
-
 type QuickAction = {
   readonly label: string;
   readonly href: string;
   readonly icon: "intake" | "score" | "follow" | "lender";
 };
 
-export const DASHBOARD_BOTTOM_NAV: readonly BottomNavItem[] = [
-  { label: "Home", href: "/dashboard", icon: "home", match: "exact" },
-  { label: "Leads", href: ANALYTICS_ROOT, icon: "leads", match: "leads" },
-  { label: "Pipeline", href: PIPELINE_ROOT, icon: "pipeline", match: "prefix" },
-  { label: "Analytics", href: ANALYTICS_ROOT, icon: "analytics", match: "prefix" },
-] as const;
+/** @deprecated Use ASSISTU2WIN_BOTTOM_NAV — kept for AppRail sidebar parity. */
+export const DASHBOARD_BOTTOM_NAV = ASSISTU2WIN_BOTTOM_NAV;
 
 const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "Intake", href: "/dashboard/leads/intake", icon: "intake" },
@@ -70,18 +61,8 @@ const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "Lender", href: "/dashboard/lender", icon: "lender" },
 ] as const;
 
-/** Leads tab: active on leads hub + intake/command, not pipeline/analytics tabs. */
-export function isLeadsNavActive(pathname: string): boolean {
-  if (!pathname.startsWith(LEADS_ROOT)) return false;
-  if (pathname.startsWith(PIPELINE_ROOT)) return false;
-  if (pathname.startsWith(ANALYTICS_ROOT)) return false;
-  return true;
-}
-
 export function isNavActive(pathname: string, item: BottomNavItem): boolean {
-  if (item.match === "exact") return pathname === item.href;
-  if (item.match === "leads") return isLeadsNavActive(pathname);
-  return pathname.startsWith(item.href);
+  return isBottomNavItemActive(pathname, item);
 }
 
 function IconGlyph({
@@ -199,7 +180,7 @@ export function AppRail({ pathname }: { readonly pathname: string }) {
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <IconGlyph kind={item.icon} className="h-5 w-5 shrink-0" />
+              <BottomNavIcon kind={item.icon} className="h-5 w-5 shrink-0" />
               {item.label}
             </Link>
           );
@@ -235,43 +216,6 @@ export function AppRail({ pathname }: { readonly pathname: string }) {
         </button>
       </form>
     </aside>
-  );
-}
-
-export function BottomAppNav({ pathname }: { readonly pathname: string }) {
-  return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-30 w-full max-w-[100vw] border-t border-[color:var(--line)] bg-[color:var(--bg1)]/95 backdrop-blur-xl lg:hidden"
-      style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
-      aria-label="Dashboard navigation"
-    >
-      <div className="mx-auto flex w-full max-w-lg items-stretch justify-around px-2 pt-2">
-        {DASHBOARD_BOTTOM_NAV.map((item) => {
-          const active = isNavActive(pathname, item);
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-semibold transition active:scale-95 sm:px-2 ${
-                active ? "text-[#00F2FE]" : "text-[#94A3B8]"
-              }`}
-              aria-current={active ? "page" : undefined}
-            >
-              <span
-                className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                  active
-                    ? "border border-[#00F2FE]/40 bg-[rgba(22,28,49,0.75)]"
-                    : "border border-transparent"
-                }`}
-              >
-                <IconGlyph kind={item.icon} className="h-5 w-5" />
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
   );
 }
 

@@ -61,6 +61,7 @@ export type LeadRecord = {
   readonly created_at: string;
   readonly updated_at: string;
   readonly welcome_email_enabled: boolean;
+  readonly rep_agreement_pending: boolean;
   readonly preferred_communication_channel: string | null;
   readonly preferred_contact_window: string | null;
   readonly custom_communication_notes: string | null;
@@ -194,6 +195,7 @@ export function coerceLeadRow(row: Record<string, unknown>): LeadRecord {
       const plan = parseCommunicationPlanFromLeadRow(row);
       return {
         welcome_email_enabled: plan.welcomeEmailEnabled,
+        rep_agreement_pending: plan.repAgreementPending,
         preferred_communication_channel: plan.preferredCommunicationChannel,
         preferred_contact_window:
           plan.preferredContactWindow.trim().length > 0

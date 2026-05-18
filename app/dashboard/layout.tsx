@@ -1,4 +1,5 @@
 import { DashboardAppShell } from "@/components/dashboard/DashboardAppShell";
+import { greatVibes } from "@/lib/fonts";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -21,8 +22,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardAppShell showDashbar>
-      {children}
-    </DashboardAppShell>
+    <div className={greatVibes.variable}>
+      <DashboardAppShell>{children}</DashboardAppShell>
+    </div>
   );
 }

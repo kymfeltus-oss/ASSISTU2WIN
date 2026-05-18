@@ -1,6 +1,8 @@
 /** Query keys on `/intake` URLs produced by `generateLeadQRUrl`. */
 export const QR_INTAKE_PARAM_KEYS = {
-  source: "source",
+  /** Campaign / event source (`src` preferred; `source` supported for legacy links). */
+  source: "src",
+  sourceLegacy: "source",
   location: "loc",
   autoWelcome: "auto_welcome",
   marketUpdate: "market_update",
@@ -18,21 +20,33 @@ export type GenerateLeadQROptions = {
   readonly marketUpdate?: boolean;
 };
 
-/** Query keys on client portal invite URLs (`/auth/signup`). */
+/** Query keys on athlete portal invite URLs (`/auth/signup`). */
 export const CLIENT_INVITE_PARAM_KEYS = {
-  type: "type",
   ref: "ref",
+  /** Legacy invite links may include type + target. */
+  type: "type",
   target: "target",
 } as const;
 
 export const CLIENT_INVITE_TYPE = "client_invite" as const;
-export const CLIENT_INVITE_TARGET_SANCTUARY = "my-sanctuary" as const;
+export const CLIENT_INVITE_TARGET_PORTAL = "my-sanctuary" as const;
+
+/** @deprecated Use CLIENT_INVITE_TARGET_PORTAL */
+export const CLIENT_INVITE_TARGET_SANCTUARY = CLIENT_INVITE_TARGET_PORTAL;
 
 export type ClientInviteUrlParams = {
   readonly type: string | null;
   readonly leadId: string | null;
   readonly target: string | null;
 };
+
+const PLACEHOLDER_HOST_FRAGMENTS = [
+  "your-domain.com",
+  "yourdomain.com",
+  "example.com",
+  "placeholder.com",
+  "changeme.com",
+] as const;
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -46,22 +60,27 @@ function normalizeBaseUrl(raw: string | undefined): string {
   return trimmed.replace(/\/$/, "");
 }
 
+function isPlaceholderHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return PLACEHOLDER_HOST_FRAGMENTS.some((fragment) => host.includes(fragment));
+}
+
 /**
- * Base URL encoded into QR codes (marketing intake + client invite).
+ * Base URL encoded into QR codes (marketing intake + athlete portal invite).
  *
  * Resolution order:
- * 1. `NEXT_PUBLIC_APP_URL` — set in Vercel / `.env` to your live domain (required for SSR)
- * 2. `window.location.origin` — browser fallback when the admin UI runs on the live site
+ * 1. `NEXT_PUBLIC_APP_URL` — required for production QR generation
+ * 2. `window.location.origin` — browser fallback when admin UI runs on the live site
  * 3. `NEXT_PUBLIC_DEV_APP_URL` — optional LAN/tunnel override in local development only
  */
 export function getPublicAppBaseUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (appUrl) {
-    return normalizeBaseUrl(appUrl);
+    return assertSafePublicBaseUrl(normalizeBaseUrl(appUrl));
   }
 
   if (typeof window !== "undefined" && window.location.origin) {
-    return normalizeBaseUrl(window.location.origin);
+    return assertSafePublicBaseUrl(normalizeBaseUrl(window.location.origin));
   }
 
   const devUrl = process.env.NEXT_PUBLIC_DEV_APP_URL?.trim();
@@ -72,6 +91,27 @@ export function getPublicAppBaseUrl(): string {
   return normalizeBaseUrl(undefined);
 }
 
+/**
+ * Rejects placeholder marketing domains in production so QR codes never encode
+ * `your-domain.com` style URLs.
+ */
+export function assertSafePublicBaseUrl(baseUrl: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new Error("Invalid NEXT_PUBLIC_APP_URL — must be a full https URL.");
+  }
+
+  if (process.env.NODE_ENV === "production" && isPlaceholderHost(parsed.hostname)) {
+    throw new Error(
+      "NEXT_PUBLIC_APP_URL is set to a placeholder domain. Configure your live AssistU2Win URL before generating QR codes.",
+    );
+  }
+
+  return `${parsed.origin}`;
+}
+
 function parseBooleanParam(value: string | null, defaultValue: boolean): boolean {
   if (value === null || value.trim().length === 0) return defaultValue;
   const normalized = value.trim().toLowerCase();
@@ -80,12 +120,20 @@ function parseBooleanParam(value: string | null, defaultValue: boolean): boolean
   return defaultValue;
 }
 
-/** Read QR campaign params from the intake landing URL. */
+function readCampaignSource(searchParams: Pick<URLSearchParams, "get">): string | null {
+  return (
+    searchParams.get(QR_INTAKE_PARAM_KEYS.source)?.trim() ||
+    searchParams.get(QR_INTAKE_PARAM_KEYS.sourceLegacy)?.trim() ||
+    null
+  );
+}
+
+/** Read QR campaign params from the intake landing URL (`src` + `loc`). */
 export function parseQrIntakeSearchParams(
   searchParams: Pick<URLSearchParams, "get">,
 ): QrIntakeUrlParams {
   return {
-    source: searchParams.get(QR_INTAKE_PARAM_KEYS.source)?.trim() || null,
+    source: readCampaignSource(searchParams),
     location: searchParams.get(QR_INTAKE_PARAM_KEYS.location)?.trim() || null,
     autoWelcome: parseBooleanParam(
       searchParams.get(QR_INTAKE_PARAM_KEYS.autoWelcome),
@@ -98,24 +146,24 @@ export function parseQrIntakeSearchParams(
   };
 }
 
-/** Prefill notes for the communication plan / conversation log. */
+/** Prefill communication notes for event / showcase QR scans. */
 export function buildQrIntakePrefillNotes(params: QrIntakeUrlParams): string {
   const { source, location } = params;
-  if (source && location) {
-    return `Lead acquired via QR scan at: ${location} (Campaign: ${source})`;
-  }
-  if (source) {
-    return `Lead acquired via QR scan (Campaign: ${source})`;
+  if (location && source) {
+    return `Lead captured at: ${location} (${source})`;
   }
   if (location) {
-    return `Lead acquired via QR scan at: ${location}`;
+    return `Lead captured at: ${location}`;
+  }
+  if (source) {
+    return `Lead captured at: ${source}`;
   }
   return "";
 }
 
 /**
- * Build the intake URL to encode as a QR code.
- * Example: https://yourapp.com/intake?source=open-house&loc=frisco&auto_welcome=true&market_update=true
+ * Marketing intake QR — new leads at events.
+ * Example: https://yourapp.com/intake?src=dallas-showcase&loc=Dallas+Showcase&auto_welcome=true
  */
 export function generateLeadQRUrl(
   campaignId: string,
@@ -136,7 +184,18 @@ export function generateLeadQRUrl(
   return `${baseUrl}/intake?${params.toString()}`;
 }
 
-/** Read client portal invite params from the signup URL. */
+/** @alias generateLeadQRUrl */
+export const generateMarketingIntakeUrl = generateLeadQRUrl;
+
+/**
+ * Master physical QR — smart gate at `/scan` (new lead → intake, returning → download).
+ * Encode this URL on the printed AssistU2Win master QR.
+ */
+export function generateMasterScanUrl(): string {
+  return `${getPublicAppBaseUrl()}/scan`;
+}
+
+/** Read athlete portal invite params from the signup URL. */
 export function parseClientInviteSearchParams(
   searchParams: Pick<URLSearchParams, "get">,
 ): ClientInviteUrlParams {
@@ -147,13 +206,20 @@ export function parseClientInviteSearchParams(
   };
 }
 
+/** Fast Track invite when `ref` is a valid lead UUID (legacy `type=client_invite` also accepted). */
 export function isClientPortalInvite(params: ClientInviteUrlParams): boolean {
-  return params.type === CLIENT_INVITE_TYPE && params.leadId !== null && isUuid(params.leadId);
+  if (params.leadId === null || !isUuid(params.leadId)) {
+    return false;
+  }
+  if (params.type === null) {
+    return true;
+  }
+  return params.type === CLIENT_INVITE_TYPE;
 }
 
 /**
- * Build the signup URL for a buyer portal invite QR code.
- * Example: /auth/signup?type=client_invite&ref={leadId}&target=my-sanctuary
+ * Athlete portal Fast Track QR — links a lead to a new AssistU2Win account.
+ * Example: /auth/signup?ref={leadId}
  */
 export function generateClientInviteUrl(leadId: string): string {
   const trimmedLeadId = leadId.trim();
@@ -163,10 +229,11 @@ export function generateClientInviteUrl(leadId: string): string {
 
   const baseUrl = getPublicAppBaseUrl();
   const params = new URLSearchParams({
-    [CLIENT_INVITE_PARAM_KEYS.type]: CLIENT_INVITE_TYPE,
     [CLIENT_INVITE_PARAM_KEYS.ref]: trimmedLeadId,
-    [CLIENT_INVITE_PARAM_KEYS.target]: CLIENT_INVITE_TARGET_SANCTUARY,
   });
 
   return `${baseUrl}/auth/signup?${params.toString()}`;
 }
+
+/** @alias generateClientInviteUrl */
+export const generateAthletePortalInviteUrl = generateClientInviteUrl;

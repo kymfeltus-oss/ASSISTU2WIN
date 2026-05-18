@@ -24,7 +24,21 @@ import {
   type Milestone,
 } from "@/components/dashboard/UrgentMilestones";
 import { MUTED, SECTION_HEADING } from "@/components/dashboard/AgentCommandShell";
+import { DollarSign, Home, TrendingUp, Users, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+
+const AMBIENT_OVERLAY_STYLE = {
+  background:
+    "radial-gradient(circle at 20% 10%, rgba(0, 242, 254, 0.12) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 191, 36, 0.04) 0%, transparent 60%)",
+} as const;
+
+const PREMIUM_CARD_SHADOW =
+  "0 4px 16px rgba(0, 0, 0, 0.25), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)";
+
+const SECTION_LABEL_CLASS =
+  "text-[10px] font-semibold tracking-[0.08em] text-[color:var(--text-muted)] uppercase";
+
+const SECTION_TITLE_CLASS = "text-lg font-bold text-[color:var(--text-primary)]";
 
 /** Visual-only sample data for dashboard panels (does not alter lead queries). */
 const URGENT_MILESTONES_SAMPLE: readonly Milestone[] = [
@@ -452,14 +466,186 @@ function EmptyStatePanel({
   );
 }
 
-function PriorityLeadCard({ lead }: { readonly lead: LeadRecord }) {
+type KpiAccent = "cyan" | "green" | "amber";
+
+function DashboardKpiCard({
+  label,
+  value,
+  subtext,
+  icon: Icon,
+  accent,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly subtext?: string;
+  readonly icon: LucideIcon;
+  readonly accent: KpiAccent;
+}) {
+  const accentStyles: Record<KpiAccent, { border: string; iconBg: string; iconColor: string }> =
+    {
+      cyan: {
+        border: "rgba(0, 242, 254, 0.35)",
+        iconBg: "rgba(0, 242, 254, 0.12)",
+        iconColor: "var(--cyan)",
+      },
+      green: {
+        border: "rgba(24, 226, 143, 0.35)",
+        iconBg: "rgba(24, 226, 143, 0.12)",
+        iconColor: "var(--semantic-success)",
+      },
+      amber: {
+        border: "rgba(251, 191, 36, 0.35)",
+        iconBg: "rgba(251, 191, 36, 0.12)",
+        iconColor: "var(--gold)",
+      },
+    };
+  const tone = accentStyles[accent];
+
+  return (
+    <div
+      className={`${CARD_NORMAL} min-w-0 p-4 transition duration-300 ease-in-out hover:-translate-y-1 hover:scale-[1.02]`}
+      style={{
+        boxShadow: PREMIUM_CARD_SHADOW,
+        borderColor: tone.border,
+        minWidth: "220px",
+        flex: "1 1 220px",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className={SECTION_LABEL_CLASS}>{label}</p>
+          <p className="mt-1 text-2xl font-extrabold tracking-tight text-[color:var(--text-primary)]">
+            {value}
+          </p>
+          {subtext ? (
+            <p className="mt-1 text-xs font-medium text-[color:var(--text-muted)]">{subtext}</p>
+          ) : null}
+        </div>
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border"
+          style={{ background: tone.iconBg, borderColor: tone.border, color: tone.iconColor }}
+        >
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CommissionChartPanel({
+  pipelineVolume,
+  loading,
+}: {
+  readonly pipelineVolume: number;
+  readonly loading: boolean;
+}) {
+  const projected = formatCommissionEstimate(pipelineVolume);
+  const bars = [
+    { label: "Wk 1", pct: 42 },
+    { label: "Wk 2", pct: 58 },
+    { label: "Wk 3", pct: 71 },
+    { label: "Wk 4", pct: hasPositiveVolume(pipelineVolume) ? 88 : 24 },
+  ];
+
+  return (
+    <section
+      className={`${CARD_NORMAL} min-w-0 overflow-hidden p-4 sm:p-5`}
+      style={{ boxShadow: PREMIUM_CARD_SHADOW }}
+    >
+      <p className={SECTION_LABEL_CLASS}>Commission</p>
+      <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>Projected earnings</h2>
+      {loading ? (
+        <p className={`mt-4 text-sm ${MUTED}`}>Loading commission outlook…</p>
+      ) : (
+        <>
+          <p className="mt-3 text-3xl font-extrabold text-[color:var(--cyan)]">{projected}</p>
+          <p className={`mt-1 text-xs ${MUTED}`}>Based on active buyer pipeline volume</p>
+          <div className="mt-5 flex h-28 items-end gap-2 sm:gap-3" aria-hidden>
+            {bars.map((bar) => (
+              <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                <div
+                  className="w-full rounded-t-md"
+                  style={{
+                    height: `${bar.pct}%`,
+                    background: "linear-gradient(180deg, var(--cyan) 0%, rgba(14, 165, 233, 0.35) 100%)",
+                    boxShadow: "0 0 12px rgba(0, 242, 254, 0.25)",
+                  }}
+                />
+                <span className="text-[9px] font-semibold text-[color:var(--text-muted)] uppercase">
+                  {bar.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function hasPositiveVolume(total: number): boolean {
+  return total > 0;
+}
+
+function HotProspectsHeader({ addLeadHref }: { readonly addLeadHref: string }) {
+  return (
+    <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className={`${SECTION_LABEL_CLASS} mb-1`}>Recent Leads</p>
+        <h2 className={SECTION_TITLE_CLASS}>Hot Prospects</h2>
+      </div>
+      <Link href={addLeadHref} className={ADD_LEAD_BUTTON_CLASS} style={ADD_LEAD_BUTTON_STYLE}>
+        + Add Lead
+      </Link>
+    </div>
+  );
+}
+
+function LiveStatusBadge() {
+  return (
+    <div
+      className="flex shrink-0 items-center gap-2 rounded-[var(--radius-button)] border px-3 py-1.5"
+      style={{
+        backgroundColor: "rgba(0, 242, 254, 0.12)",
+        borderColor: "rgba(0, 242, 254, 0.35)",
+        boxShadow:
+          "0 4px 12px rgba(0, 242, 254, 0.2), inset 0 1px 0 rgba(0, 242, 254, 0.1)",
+      }}
+    >
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{
+          background: "radial-gradient(circle, var(--cyan) 0%, rgba(0, 242, 254, 0.8) 100%)",
+          boxShadow: "0 0 12px var(--cyan), 0 0 24px rgba(0, 242, 254, 0.5)",
+        }}
+        aria-hidden
+      />
+      <span className="text-xs font-extrabold tracking-[0.06em] text-[color:var(--cyan)] uppercase">
+        Live
+      </span>
+    </div>
+  );
+}
+
+function PriorityLeadCard({
+  lead,
+  featured = false,
+}: {
+  readonly lead: LeadRecord;
+  readonly featured?: boolean;
+}) {
   const tier = getPotentialHudTier(lead.market_readiness_score);
   const progress = Math.min(100, Math.max(0, lead.market_readiness_score));
   const tags = buildLeadTags(lead);
   const loanType = lead.ai_extracted_preferences.loan_type;
 
   return (
-    <article className={`${CARD_NORMAL} relative min-w-0 overflow-hidden p-4 transition active:scale-[0.99] sm:p-5`}>
+    <article
+      className={`${CARD_NORMAL} relative min-w-0 overflow-hidden p-4 transition duration-300 ease-in-out hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.99] sm:p-5 ${
+        featured ? "border-[color:var(--cyan)]/50 ring-1 ring-[color:var(--cyan)]/25" : ""
+      }`}
+      style={{ boxShadow: PREMIUM_CARD_SHADOW }}
+    >
       <div className="relative flex gap-3">
         <div
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#1E2A44] bg-[#0B1020] text-sm font-bold text-[#00F2FE]"
@@ -743,44 +929,26 @@ function PendingTasksPanel({
 }) {
   const mediumTasks = actions.filter((action) => action.priority !== "high");
 
+  if (loading) {
+    return <p className={`text-sm ${MUTED}`}>Loading pending items…</p>;
+  }
+  if (mediumTasks.length === 0) {
+    return <p className={`text-sm ${MUTED}`}>No medium-priority tasks in queue.</p>;
+  }
+
   return (
-    <section
-      className={`${CARD_NORMAL} flex min-h-0 flex-col overflow-hidden lg:max-h-[calc(100dvh-3rem)]`}
-    >
-      <div className="shrink-0 border-b border-[#1E2A44] px-4 py-4 sm:px-5">
-        <p className="text-[10px] font-semibold tracking-[0.08em] text-[color:var(--text-muted)] uppercase">
-          Follow-through
-        </p>
-        <h2 className="mt-1 text-lg font-bold text-[color:var(--text-primary)]">
-          Pending items
-        </h2>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-        {loading ? (
-          <p className={`text-sm ${MUTED}`}>Loading pending items…</p>
-        ) : mediumTasks.length === 0 ? (
-          <p className={`text-sm ${MUTED}`}>No medium-priority tasks in queue.</p>
-        ) : (
-          <ul className="space-y-2">
-            {mediumTasks.map((action) => (
-              <li
-                key={action.id}
-                className={`${CARD_NORMAL} rounded-xl p-3 transition duration-300 hover:translate-x-1`}
-                style={{
-                  boxShadow:
-                    "0 4px 16px rgba(0, 0, 0, 0.25), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
-                }}
-              >
-                <p className="text-xs font-semibold text-[color:var(--text-primary)]">
-                  {action.leadName}
-                </p>
-                <p className={`mt-0.5 text-sm ${MUTED}`}>{action.label}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
+    <ul className="space-y-3">
+      {mediumTasks.map((action) => (
+        <li
+          key={action.id}
+          className={`${CARD_NORMAL} rounded-xl border border-[color:var(--line)] p-3 transition duration-300 ease-in-out hover:translate-x-1`}
+          style={{ boxShadow: PREMIUM_CARD_SHADOW }}
+        >
+          <p className="text-xs font-semibold text-[color:var(--text-primary)]">{action.label}</p>
+          <p className={`mt-1 text-[11px] ${MUTED}`}>{action.leadName}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -1062,39 +1230,60 @@ function DashboardLeadsOsScreen() {
     };
   }, [aiOpen, closeAi]);
 
+  const welcomeLine = loading
+    ? "Loading your pipeline…"
+    : hasLeads
+      ? attentionCount > 0
+        ? `${attentionCount} ${attentionCount === 1 ? "buyer needs" : "buyers need"} your attention today.`
+        : "Your pipeline is on track — here's what's happening today."
+      : "Add buyers to activate your command board.";
+
   return (
     <>
-      <div className="flex w-full min-w-0 flex-wrap items-start gap-4 md:gap-6">
+      <div
+        className="relative min-h-dvh w-full min-w-0 overflow-x-hidden"
+        style={{ fontFamily: "var(--font-geist-sans), Inter, system-ui, sans-serif" }}
+      >
+        <div
+          className="pointer-events-none fixed inset-0 z-0"
+          style={AMBIENT_OVERLAY_STYLE}
+          aria-hidden
+        />
+      <div className="relative z-10 flex w-full min-w-0 flex-wrap items-start gap-4 md:gap-6">
         <main className="min-w-0 flex-1" style={{ minWidth: "320px" }}>
-            <div className="flex min-h-dvh w-full min-w-0 flex-col">
-          <header className="mb-5 flex flex-wrap items-center gap-3 pt-1 lg:pt-4">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
-            <Image
-              src={BRAND_LOGO_SRC}
-              alt={BRAND_LOGO_ALT}
-              fill
-              className="object-cover"
-              sizes="40px"
-              unoptimized
-            />
-          </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold tracking-[0.22em] text-[#00F2FE]/80 uppercase lg:hidden">
-                Assist U2 Win
-              </p>
-              <h1 className="flex flex-wrap items-baseline gap-x-2 gap-y-0 leading-none">
-                <span className="dashboard-title-script text-[clamp(42px,6vw,56px)]">
-                  Agent
+            <div className="flex w-full min-w-0 flex-col">
+          <DashboardUtilityBar />
+          <div className="mt-4 flex min-w-0 flex-col gap-4 md:gap-6">
+          <header className="flex min-w-0 flex-col gap-3 pt-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
+                <Image
+                  src={BRAND_LOGO_SRC}
+                  alt={BRAND_LOGO_ALT}
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                  unoptimized
+                />
+              </div>
+              <h1
+                className="flex min-w-0 flex-wrap items-baseline gap-3"
+                style={{ fontSize: "clamp(32px, 5vw, 42px)", lineHeight: 1.1 }}
+              >
+                <span className="dashboard-title-script text-[clamp(42px,6vw,56px)] tracking-[0.02em]">
+                  Realtor
                 </span>
-                <span className="dashboard-title-bold text-[clamp(32px,5vw,42px)]">
-                  Command
+                <span className="dashboard-title-bold text-[clamp(32px,5vw,42px)] tracking-[-0.03em]">
+                  Dashboard
                 </span>
               </h1>
-              <p className={`mt-1 hidden text-sm md:block ${MUTED}`}>
-                Revenue command board for your active buyer pipeline.
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <LiveStatusBadge />
+              <ScoreRing
+                score={hasLeads ? avgPbi : 0}
+                size={56}
+                label="Buyer Readiness"
+                className="ml-auto hidden shrink-0 md:flex"
+              />
               <form action="/api/auth/signout" method="POST" className="lg:hidden">
                 <button
                   type="submit"
@@ -1104,9 +1293,10 @@ function DashboardLeadsOsScreen() {
                 </button>
               </form>
             </div>
+            <p className="text-[15px] font-medium text-[color:var(--text-muted)]">
+              Welcome back! {welcomeLine}
+            </p>
           </header>
-
-          <DashboardUtilityBar />
 
         {statusMessage ? (
           <p
@@ -1117,67 +1307,35 @@ function DashboardLeadsOsScreen() {
           </p>
         ) : null}
 
-          <div className="flex flex-col gap-5 lg:gap-6">
-            <section className={`${CARD_FEATURED} relative overflow-visible p-4 sm:p-5 lg:p-6`}>
-              <p className={`text-[10px] font-semibold tracking-[0.18em] uppercase sm:text-xs ${MUTED}`}>
-                Revenue command board
-              </p>
-              <div className="relative mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
-            <div className="min-w-0 flex-1">
-              {loading ? (
-                <p className={`text-sm ${MUTED}`}>Loading active buyers…</p>
-              ) : hasLeads ? (
-                <p className="text-xl font-bold leading-snug text-[#F8FAFC] lg:text-2xl">
-                  <span className="text-[#00F2FE]">{attentionCount}</span>{" "}
-                  {attentionCount === 1 ? "buyer needs" : "buyers need"} your attention.
-                </p>
-              ) : (
-                <>
-                  <p className="text-xl font-bold leading-snug text-[#F8FAFC] lg:text-2xl">
-                    No active buyers yet
-                  </p>
-                  <p className={`mt-2 text-sm leading-relaxed ${MUTED}`}>
-                    Lead intelligence will appear here once buyers enter the pipeline.
-                  </p>
-                </>
-              )}
-            </div>
-                <ScoreRing
-                  score={hasLeads ? avgPbi : 0}
-                  size={72}
-                  label="Buyer Readiness"
-                  className="mx-auto shrink-0 sm:mx-0 md:hidden"
+            <section className="min-w-0">
+              <p className={`${SECTION_LABEL_CLASS} mb-3`}>Key Metrics</p>
+              <div className="flex min-w-0 flex-wrap gap-3 md:gap-4">
+                <DashboardKpiCard
+                  label={quickStats[0]?.label ?? "Buyer Readiness"}
+                  value={quickStats[0]?.value ?? "-"}
+                  icon={Users}
+                  accent="green"
                 />
-                <ScoreRing
-                  score={hasLeads ? avgPbi : 0}
-                  size={88}
-                  label="Buyer Readiness"
-                  className="mx-auto hidden shrink-0 sm:mx-0 md:block"
+                <DashboardKpiCard
+                  label={quickStats[1]?.label ?? "Pipeline"}
+                  value={quickStats[1]?.value ?? "-"}
+                  icon={Home}
+                  accent="cyan"
+                />
+                <DashboardKpiCard
+                  label={quickStats[2]?.label ?? "Potential Buyers"}
+                  value={quickStats[2]?.value ?? "-"}
+                  icon={Users}
+                  accent="green"
+                />
+                <DashboardKpiCard
+                  label="Pending Pipeline"
+                  value="$42K"
+                  subtext="5 in Escrow"
+                  icon={TrendingUp}
+                  accent="amber"
                 />
               </div>
-              <div className="relative mt-4 flex flex-wrap gap-2 sm:gap-3">
-            {quickStats.map((stat, index) => {
-              const isPendingPipeline = index === 3;
-              const label = isPendingPipeline ? "Pending Pipeline" : stat.label;
-              const value = isPendingPipeline ? "$42K" : stat.value;
-              const subtext = isPendingPipeline ? "5 in Escrow" : stat.subtext;
-              return (
-              <div
-                key={stat.label}
-                className="rounded-xl border border-[#1E2A44] bg-[#0B1020]/80 px-3 py-2.5"
-                style={{ minWidth: "220px", flex: "1 1 220px" }}
-              >
-                <p className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${MUTED}`}>
-                  {label}
-                </p>
-                <p className="mt-0.5 text-base font-bold text-[#F8FAFC]">{value}</p>
-                {subtext ? (
-                  <p className={`mt-0.5 text-[10px] ${MUTED}`}>{subtext}</p>
-                ) : null}
-              </div>
-              );
-            })}
-          </div>
             </section>
 
             <PipelineStatusTracker />
@@ -1185,16 +1343,13 @@ function DashboardLeadsOsScreen() {
             <div className="flex w-full min-w-0 flex-wrap gap-4 md:gap-6">
               <div className="min-w-0 flex-1 space-y-5 lg:space-y-6" style={{ minWidth: "320px" }}>
               <section className="min-w-0">
-                <SectionTitle
-                  title="Priority Buyer List"
-                  addLeadHref="/dashboard/leads/new"
-                />
+                <HotProspectsHeader addLeadHref="/dashboard/leads/new" />
                 {loading ? (
                   <p className={`text-sm ${MUTED}`}>Loading priority buyers…</p>
                 ) : priorityLeads.length > 0 ? (
-                  <div className="space-y-3">
-                    {priorityLeads.map((lead) => (
-                      <PriorityLeadCard key={lead.id} lead={lead} />
+                  <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
+                    {priorityLeads.map((lead, index) => (
+                      <PriorityLeadCard key={lead.id} lead={lead} featured={index === 0} />
                     ))}
                   </div>
                 ) : (
@@ -1208,6 +1363,8 @@ function DashboardLeadsOsScreen() {
               </section>
 
               <ActivityFeed activities={ACTIVITY_FEED_SAMPLE} />
+
+            <CommissionChartPanel pipelineVolume={pipelineVolume} loading={loading} />
 
             <div className={SECTION_GRID}>
               <section className="min-w-0">
@@ -1304,14 +1461,23 @@ function DashboardLeadsOsScreen() {
             </div>
               </div>
 
-              <div className="flex w-full min-w-0 flex-col gap-4 lg:w-[320px]">
-                <UrgentMilestones milestones={URGENT_MILESTONES_SAMPLE} />
-                <PendingTasksPanel actions={executionActions} loading={loading} />
+              <div className="w-full min-w-0 space-y-4 md:space-y-6 lg:w-[320px]">
+                <div>
+                  <p className={`${SECTION_LABEL_CLASS} mb-1`}>Critical Deadlines</p>
+                  <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Urgent Milestones</h2>
+                  <UrgentMilestones milestones={URGENT_MILESTONES_SAMPLE} />
+                </div>
+                <div>
+                  <p className={`${SECTION_LABEL_CLASS} mb-1`}>Tasks &amp; Appointments</p>
+                  <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Pending Items</h2>
+                  <PendingTasksPanel actions={executionActions} loading={loading} />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+      </div>
     </div>
 
     <button

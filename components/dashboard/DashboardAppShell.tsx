@@ -3,7 +3,6 @@
 import {
   APP_SHELL_BG,
   AppRail,
-  BottomAppNav,
   PAGE_CONTAINER,
 } from "@/components/dashboard/AgentCommandShell";
 import { usePathname } from "next/navigation";
@@ -11,15 +10,10 @@ import type { ReactNode } from "react";
 
 type DashboardAppShellProps = {
   readonly children: ReactNode;
-  /** Bottom dashbar — only set true from authenticated dashboard layout. */
-  readonly showDashbar?: boolean;
 };
 
-/** Shared chrome for all /dashboard routes — left rail, bottom tabs, safe areas. */
-export function DashboardAppShell({
-  children,
-  showDashbar = true,
-}: DashboardAppShellProps) {
+/** Shared chrome for all /dashboard routes — left rail (bottom nav is global in root layout). */
+export function DashboardAppShell({ children }: DashboardAppShellProps) {
   const pathname = usePathname();
 
   return (
@@ -36,11 +30,6 @@ export function DashboardAppShell({
           <div className="min-w-0">{children}</div>
         </div>
       </div>
-      {showDashbar ? (
-        <div className="print:hidden">
-          <BottomAppNav pathname={pathname} />
-        </div>
-      ) : null}
     </div>
   );
 }
