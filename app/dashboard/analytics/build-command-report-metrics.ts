@@ -29,6 +29,7 @@ const LEAD_STATUS_TO_DEAL_STAGE: Readonly<Record<LeadStatus, DealStage>> = {
   Denied: "INTAKE",
   "No Pre-Approval": "INTAKE",
   Cash: "PRE_APPROVAL",
+  "Active Client": "HOME_SHOPPING",
   "Active Searching": "HOME_SHOPPING",
   "Under Contract": "UNDER_CONTRACT",
   Closed: "CLOSING_ROOM",

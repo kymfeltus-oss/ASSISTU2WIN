@@ -10,7 +10,9 @@ import {
   type LeadOperationalHurdles,
   type PurchaseTimeline,
 } from "@/lib/leads/potential-index";
+import CommunicationPlan from "@/components/CommunicationPlan";
 import { formatLeadBudget } from "@/lib/leads/lead-insights";
+import { communicationPlanFromLead } from "@/lib/leads/communication-plan";
 import {
   LEAD_STATUSES,
   type LeadRecord,
@@ -240,25 +242,48 @@ export function LeadDetailSlideOver({
           ) : null}
 
           {activeTab === "profile" ? (
-            <GlassPanel variant="soft" className="space-y-3 p-4 text-sm">
-              <p className="text-slate-300">Phone · {lead.phone_number ?? "—"}</p>
-              <p className="text-slate-300">Email · {lead.email_address ?? "—"}</p>
-              <p className="text-slate-300">Source · {lead.lead_source}</p>
-              <label className="block">
-                <span className={spatial.label}>Status</span>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as LeadStatus)}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-white/[0.03] p-2.5 text-sm text-white"
-                >
-                  {LEAD_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </GlassPanel>
+            <>
+              <GlassPanel variant="soft" className="space-y-3 p-4 text-sm">
+                <p className="text-slate-300">Phone · {lead.phone_number ?? "—"}</p>
+                <p className="text-slate-300">Email · {lead.email_address ?? "—"}</p>
+                <p className="text-slate-300">Source · {lead.lead_source}</p>
+                <label className="block">
+                  <span className={spatial.label}>Status</span>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as LeadStatus)}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/[0.03] p-2.5 text-sm text-white"
+                  >
+                    {LEAD_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </GlassPanel>
+              <CommunicationPlan
+                key={lead.id}
+                leadId={lead.id}
+                initialData={communicationPlanFromLead(lead)}
+                onSaved={(data) => {
+                  onSaved({
+                    ...lead,
+                    welcome_email_enabled: data.welcomeEmailEnabled,
+                    preferred_communication_channel: data.preferredCommunicationChannel,
+                    preferred_contact_window:
+                      data.preferredContactWindow.trim().length > 0
+                        ? data.preferredContactWindow
+                        : null,
+                    custom_communication_notes:
+                      data.customCommunicationNotes.trim().length > 0
+                        ? data.customCommunicationNotes
+                        : null,
+                    communication_preferences: data.communicationPreferences,
+                  });
+                }}
+              />
+            </>
           ) : null}
 
           {activeTab === "financing" ? (

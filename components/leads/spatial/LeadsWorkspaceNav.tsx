@@ -53,6 +53,12 @@ export function LeadsWorkspaceNav() {
             );
           })}
           <Link
+            href="/dashboard/leads/qr"
+            className={`${spatial.navLink} ${spatial.navIdle}`}
+          >
+            QR
+          </Link>
+          <Link
             href="/dashboard/leads/intake"
             className="ml-1 rounded-full bg-cyan-500/90 px-4 py-2 text-xs font-semibold tracking-wide text-[#060a14] transition-all hover:bg-cyan-400"
           >

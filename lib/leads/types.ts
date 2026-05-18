@@ -5,6 +5,7 @@ export const LEAD_STATUSES = [
   "Denied",
   "No Pre-Approval",
   "Cash",
+  "Active Client",
   "Active Searching",
   "Under Contract",
   "Closed",
@@ -22,6 +23,9 @@ export const LOAN_TYPES = [
 ] as const;
 
 export type LoanType = (typeof LOAN_TYPES)[number];
+
+import type { LeadCommunicationPreferences } from "@/lib/leads/admin-intake-fields";
+import { parseCommunicationPlanFromLeadRow } from "@/lib/leads/communication-plan";
 
 /** AI-extracted buyer preferences (extensible for lender/title portals). */
 export type LeadExtractedPreferences = {
@@ -56,6 +60,11 @@ export type LeadRecord = {
   readonly is_ai_parsed: boolean;
   readonly created_at: string;
   readonly updated_at: string;
+  readonly welcome_email_enabled: boolean;
+  readonly preferred_communication_channel: string | null;
+  readonly preferred_contact_window: string | null;
+  readonly custom_communication_notes: string | null;
+  readonly communication_preferences: LeadCommunicationPreferences;
 };
 
 export type CopilotIntakeRequest = {
@@ -181,5 +190,21 @@ export function coerceLeadRow(row: Record<string, unknown>): LeadRecord {
     is_ai_parsed: row.is_ai_parsed === true,
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
+    ...(() => {
+      const plan = parseCommunicationPlanFromLeadRow(row);
+      return {
+        welcome_email_enabled: plan.welcomeEmailEnabled,
+        preferred_communication_channel: plan.preferredCommunicationChannel,
+        preferred_contact_window:
+          plan.preferredContactWindow.trim().length > 0
+            ? plan.preferredContactWindow
+            : null,
+        custom_communication_notes:
+          plan.customCommunicationNotes.trim().length > 0
+            ? plan.customCommunicationNotes
+            : null,
+        communication_preferences: plan.communicationPreferences,
+      };
+    })(),
   };
 }

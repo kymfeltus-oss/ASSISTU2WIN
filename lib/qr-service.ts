@@ -18,6 +18,28 @@ export type GenerateLeadQROptions = {
   readonly marketUpdate?: boolean;
 };
 
+/** Query keys on client portal invite URLs (`/auth/signup`). */
+export const CLIENT_INVITE_PARAM_KEYS = {
+  type: "type",
+  ref: "ref",
+  target: "target",
+} as const;
+
+export const CLIENT_INVITE_TYPE = "client_invite" as const;
+export const CLIENT_INVITE_TARGET_SANCTUARY = "my-sanctuary" as const;
+
+export type ClientInviteUrlParams = {
+  readonly type: string | null;
+  readonly leadId: string | null;
+  readonly target: string | null;
+};
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function normalizeBaseUrl(raw: string | undefined): string {
   const trimmed = raw?.trim();
   if (!trimmed) return "http://localhost:3000";
@@ -91,4 +113,39 @@ export function generateLeadQRUrl(
   });
 
   return `${baseUrl}/intake?${params.toString()}`;
+}
+
+/** Read client portal invite params from the signup URL. */
+export function parseClientInviteSearchParams(
+  searchParams: Pick<URLSearchParams, "get">,
+): ClientInviteUrlParams {
+  return {
+    type: searchParams.get(CLIENT_INVITE_PARAM_KEYS.type)?.trim() || null,
+    leadId: searchParams.get(CLIENT_INVITE_PARAM_KEYS.ref)?.trim() || null,
+    target: searchParams.get(CLIENT_INVITE_PARAM_KEYS.target)?.trim() || null,
+  };
+}
+
+export function isClientPortalInvite(params: ClientInviteUrlParams): boolean {
+  return params.type === CLIENT_INVITE_TYPE && params.leadId !== null && isUuid(params.leadId);
+}
+
+/**
+ * Build the signup URL for a buyer portal invite QR code.
+ * Example: /auth/signup?type=client_invite&ref={leadId}&target=my-sanctuary
+ */
+export function generateClientInviteUrl(leadId: string): string {
+  const trimmedLeadId = leadId.trim();
+  if (!isUuid(trimmedLeadId)) {
+    throw new Error("generateClientInviteUrl requires a valid lead UUID.");
+  }
+
+  const baseUrl = getPublicAppBaseUrl();
+  const params = new URLSearchParams({
+    [CLIENT_INVITE_PARAM_KEYS.type]: CLIENT_INVITE_TYPE,
+    [CLIENT_INVITE_PARAM_KEYS.ref]: trimmedLeadId,
+    [CLIENT_INVITE_PARAM_KEYS.target]: CLIENT_INVITE_TARGET_SANCTUARY,
+  });
+
+  return `${baseUrl}/auth/signup?${params.toString()}`;
 }

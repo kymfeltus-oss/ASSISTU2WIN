@@ -1,5 +1,7 @@
 "use server";
 
+import { linkLeadToBuyerAccount } from "@/lib/leads/link-buyer-account";
+import { CLIENT_INVITE_TARGET_SANCTUARY } from "@/lib/qr-service";
 import { createClient } from "@/lib/supabase/server";
 import { diagnoseSupabasePublicEnv } from "@/lib/supabase/public-env";
 import { revalidatePath } from "next/cache";
@@ -146,4 +148,76 @@ export async function signup(formData: FormData): Promise<void> {
 
   revalidatePath("/", "layout");
   redirect("/login?message=Check email to confirm registration");
+}
+
+function getHiddenField(formData: FormData, name: string): string | null {
+  const raw = formData.get(name);
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/** Buyer portal signup from a client-invite QR (`ref` = lead id). */
+export async function signupClientPortalInvite(formData: FormData): Promise<void> {
+  const email = getTrimmedEmail(formData);
+  const password = getPassword(formData);
+  const fullName = getTrimmedFullName(formData);
+  const leadRef = getHiddenField(formData, "leadRef");
+  const target = getHiddenField(formData, "target");
+
+  if (!email || !password || !fullName) {
+    const missing: string[] = [];
+    if (!fullName) missing.push("Full Name");
+    if (!email) missing.push("Email");
+    if (!password) missing.push("Password");
+    redirect(
+      `/auth/signup?error=${encodeURIComponent(`Missing required fields: ${missing.join(", ")}`)}${leadRef ? `&ref=${encodeURIComponent(leadRef)}&type=client_invite&target=${encodeURIComponent(target ?? CLIENT_INVITE_TARGET_SANCTUARY)}` : ""}`,
+    );
+  }
+
+  const envDiagnostic = diagnoseSupabasePublicEnv();
+  if (!envDiagnostic.ok) {
+    redirect(
+      "/auth/signup?error=Supabase+env+misconfigured.+Check+NEXT_PUBLIC_SUPABASE_URL+and+ANON_KEY.",
+    );
+  }
+
+  let userId: string | null = null;
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          portal_invite: true,
+        },
+      },
+    });
+    if (error) throw error;
+    userId = data.user?.id ?? null;
+  } catch (error: unknown) {
+    unstable_rethrow(error);
+    console.error("[AUTH_CLIENT_INVITE_SIGNUP_FAILURE]", { error });
+    const message =
+      isAuthApiError(error) && error.message ? error.message : "Registration failed";
+    redirect(`/auth/signup?error=${encodeURIComponent(message)}`);
+  }
+
+  if (userId && leadRef) {
+    const linkResult = await linkLeadToBuyerAccount(leadRef, userId);
+    if (!linkResult.ok) {
+      redirect(`/auth/signup?error=${encodeURIComponent(linkResult.message)}`);
+    }
+  }
+
+  revalidatePath("/", "layout");
+
+  if (target === CLIENT_INVITE_TARGET_SANCTUARY) {
+    redirect("/my-sanctuary");
+  }
+
+  redirect("/dashboard");
 }

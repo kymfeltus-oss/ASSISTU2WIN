@@ -66,7 +66,9 @@ export async function proxy(request: NextRequest) {
     user = null;
   }
 
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isAuthPage =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/auth/signup");
   const isCopilotIntakeWebhook =
     request.nextUrl.pathname === "/api/copilot-intake";
   const isPublicLeadIntake =
@@ -92,9 +94,12 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && isAuthPage && !isRelaxedLogin()) {
-    const redirectResponse = NextResponse.redirect(
-      new URL("/dashboard", request.url),
-    );
+    const destination =
+      request.nextUrl.pathname.startsWith("/auth/signup") &&
+      request.nextUrl.searchParams.get("target") === "my-sanctuary"
+        ? "/my-sanctuary"
+        : "/dashboard";
+    const redirectResponse = NextResponse.redirect(new URL(destination, request.url));
     copyCookiesToResponse(response, redirectResponse);
     return redirectResponse;
   }

@@ -1,16 +1,18 @@
 "use client";
 
+import { CommunicationPlanFields } from "@/components/leads/CommunicationPlanFields";
 import {
   IntakeField,
   IntakeSection,
-  IntakeSelect,
-  IntakeTextarea,
-  IntakeToggle,
   IntakeTwoCol,
 } from "@/components/leads/intake/admin-intake-ui";
 import { submitPublicLeadIntake } from "@/lib/communication-service";
 import { formatUsPhoneInput, usPhoneDigitsOnly } from "@/lib/format/us-phone";
 import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
+import {
+  defaultCommunicationPlanData,
+  type CommunicationPlanData,
+} from "@/lib/leads/communication-plan";
 import {
   buildQrIntakePrefillNotes,
   parseQrIntakeSearchParams,
@@ -31,21 +33,24 @@ export default function QRIntakeProcessor() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [preferredChannel, setPreferredChannel] = useState("Text");
-  const [contactWindow, setContactWindow] = useState("");
-  const [notes, setNotes] = useState("");
-  const [welcomeEmailEnabled, setWelcomeEmailEnabled] = useState(true);
-  const [marketUpdateEnabled, setMarketUpdateEnabled] = useState(true);
+  const [commPlan, setCommPlan] = useState<CommunicationPlanData>(() =>
+    defaultCommunicationPlanData(),
+  );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setWelcomeEmailEnabled(qrParams.autoWelcome);
-    setMarketUpdateEnabled(qrParams.marketUpdate);
     const prefill = buildQrIntakePrefillNotes(qrParams);
-    if (prefill.length > 0) {
-      setNotes(prefill);
-    }
+    setCommPlan((prev) => ({
+      ...prev,
+      welcomeEmailEnabled: qrParams.autoWelcome,
+      communicationPreferences: {
+        ...prev.communicationPreferences,
+        market_update_email_enabled: qrParams.marketUpdate,
+      },
+      customCommunicationNotes:
+        prefill.length > 0 ? prefill : prev.customCommunicationNotes,
+    }));
   }, [qrParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -61,11 +66,15 @@ export default function QRIntakeProcessor() {
       name: name.trim(),
       email: email.trim(),
       phone: formattedPhone,
-      preferred_channel: preferredChannel,
-      contact_window: contactWindow.trim(),
-      notes: notes.trim().length > 0 ? notes.trim() : undefined,
-      optInToUpdates: marketUpdateEnabled,
-      welcomeEmailEnabled,
+      preferred_channel: commPlan.preferredCommunicationChannel,
+      contact_window: commPlan.preferredContactWindow.trim(),
+      notes:
+        commPlan.customCommunicationNotes.trim().length > 0
+          ? commPlan.customCommunicationNotes.trim()
+          : undefined,
+      optInToUpdates:
+        commPlan.communicationPreferences.market_update_email_enabled,
+      welcomeEmailEnabled: commPlan.welcomeEmailEnabled,
       campaignId: qrParams.source ?? undefined,
       location: qrParams.location ?? undefined,
     });
@@ -157,48 +166,11 @@ export default function QRIntakeProcessor() {
           </IntakeTwoCol>
         </IntakeSection>
 
-        <IntakeSection title="Communication plan">
-          <IntakeTwoCol>
-            <IntakeSelect
-              label="Preferred channel"
-              value={preferredChannel}
-              onChange={setPreferredChannel}
-              className="sm:col-span-2"
-            >
-              <option value="Text">Text</option>
-              <option value="Call">Call</option>
-              <option value="Email">Email</option>
-            </IntakeSelect>
-            <IntakeField
-              label="Contact window"
-              value={contactWindow}
-              onChange={setContactWindow}
-              wordFormat="proper-words"
-              placeholder="Morning, evenings…"
-              className="sm:col-span-2"
-            />
-            <div className="space-y-2 sm:col-span-2">
-              <IntakeToggle
-                label="Welcome email"
-                checked={welcomeEmailEnabled}
-                onChange={setWelcomeEmailEnabled}
-              />
-              <IntakeToggle
-                label="Market update emails"
-                checked={marketUpdateEnabled}
-                onChange={setMarketUpdateEnabled}
-              />
-            </div>
-            <IntakeTextarea
-              label="Latest touchpoint / conversation log"
-              value={notes}
-              onChange={setNotes}
-              rows={3}
-              wordFormat="sentence"
-              className="sm:col-span-2"
-            />
-          </IntakeTwoCol>
-        </IntakeSection>
+        <CommunicationPlanFields
+          value={commPlan}
+          onChange={setCommPlan}
+          variant="public"
+        />
 
         {errorMessage ? (
           <p className="text-sm text-red-400" role="alert">
