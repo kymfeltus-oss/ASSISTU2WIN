@@ -8,6 +8,7 @@ export const BOTTOM_NAV_EXCLUDED_PATHS = [
   "/scan",
   "/download-app",
   "/my-sanctuary",
+  "/admin",
 ] as const;
 
 export function shouldShowBottomNav(pathname: string): boolean {

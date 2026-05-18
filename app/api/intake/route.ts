@@ -4,6 +4,7 @@ import {
   EMPTY_COMMUNICATION_PREFERENCES,
   parseCommunicationPreferences,
 } from "@/lib/leads/admin-intake-fields";
+import { getNotificationBaseUrl } from "@/lib/notifications/notification-base-url";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 
@@ -51,6 +52,8 @@ export async function POST(
   } catch {
     return jsonError(400, "Request body must be valid JSON.");
   }
+
+  console.log("DEBUG: Received Payload:", JSON.stringify(body, null, 2));
 
   const leadNameRaw = readString(body, "lead_name", "name");
   const emailRaw = readString(body, "email_address", "email");
@@ -155,6 +158,20 @@ export async function POST(
         500,
         error?.message ?? "Unable to save your information. Please try again.",
       );
+    }
+
+    if (leadData.welcome_email_enabled && leadData.email_address) {
+      const baseUrl = getNotificationBaseUrl();
+      void fetch(`${baseUrl}/api/notifications/welcome`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: leadData.email_address,
+          name: leadData.lead_name,
+        }),
+      }).catch((welcomeError: unknown) => {
+        console.error("[API_INTAKE_WELCOME_EMAIL_TRIGGER]", { welcomeError });
+      });
     }
 
     return NextResponse.json({ ok: true, leadId: String(data.id) }, { status: 201 });
