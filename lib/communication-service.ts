@@ -1,5 +1,6 @@
 import {
   EMPTY_COMMUNICATION_PREFERENCES,
+  parseCommunicationPreferences,
   type LeadCommunicationPreferences,
 } from "@/lib/leads/admin-intake-fields";
 import { formatProperWordsInput, formatEmailInput } from "@/lib/format/proper-text";
@@ -16,6 +17,9 @@ export type PublicLeadIntakeFormData = {
   readonly notes?: string;
   readonly optInToUpdates?: boolean;
   readonly welcomeEmailEnabled?: boolean;
+  /** Maps to `public.leads.communication_preferences` (jsonb). */
+  readonly communication_preferences?: LeadCommunicationPreferences;
+  readonly repAgreementPending?: boolean;
   /** QR campaign id (URL `source` param). */
   readonly campaignId?: string;
   /** QR scan location (URL `loc` param). */
@@ -90,6 +94,15 @@ function parsePublicLeadIntakeFormData(
         ? record.loc.trim()
         : undefined;
 
+  const communicationPreferencesRaw =
+    record.communication_preferences ?? record.communicationPreferences;
+
+  const repAgreementPending =
+    record.repAgreementPending === true ||
+    record.rep_agreement_pending === true ||
+    record.repAgreementPending === "true" ||
+    record.rep_agreement_pending === "true";
+
   return {
     name,
     email,
@@ -99,6 +112,11 @@ function parsePublicLeadIntakeFormData(
     notes,
     optInToUpdates,
     welcomeEmailEnabled,
+    communication_preferences:
+      communicationPreferencesRaw !== undefined
+        ? parseCommunicationPreferences(communicationPreferencesRaw)
+        : undefined,
+    repAgreementPending,
     campaignId: campaignId && campaignId.length > 0 ? campaignId : undefined,
     location: location && location.length > 0 ? location : undefined,
   };
@@ -146,10 +164,17 @@ export async function handleLeadIntake(
     const welcomeEmailEnabled = formData.welcomeEmailEnabled === true;
     const optInToUpdates = formData.optInToUpdates === true;
 
-    const communicationPreferences = buildCommunicationPreferences(
-      optInToUpdates,
-      welcomeEmailEnabled,
-    );
+    const communication_preferences: LeadCommunicationPreferences = {
+      ...(formData.communication_preferences ??
+        buildCommunicationPreferences(optInToUpdates, welcomeEmailEnabled)),
+      buyer_consultation_invite_enabled:
+        welcomeEmailEnabled ||
+        (formData.communication_preferences?.buyer_consultation_invite_enabled ??
+          false),
+      market_update_email_enabled:
+        formData.communication_preferences?.market_update_email_enabled ??
+        optInToUpdates,
+    };
 
     const leadSource = resolvePublicLeadSource(formData);
 
@@ -168,7 +193,8 @@ export async function handleLeadIntake(
       preferred_contact_window: contactWindow.length > 0 ? contactWindow : null,
       custom_communication_notes: notes,
       welcome_email_enabled: welcomeEmailEnabled,
-      communication_preferences: communicationPreferences,
+      rep_agreement_pending: formData.repAgreementPending === true,
+      communication_preferences,
       market_readiness_score: 50,
       purchase_timeline: "1-3 Months",
       is_first_time_buyer: false,
@@ -191,7 +217,7 @@ export async function handleLeadIntake(
 
     const { data, error } = await supabase
       .from("leads")
-      .insert(insertRow)
+      .insert([insertRow])
       .select("id")
       .single();
 
@@ -218,7 +244,7 @@ export async function submitPublicLeadIntake(
   formData: PublicLeadIntakeFormData,
 ): Promise<PublicLeadIntakeResult> {
   try {
-    const response = await fetch("/api/leads/public-intake", {
+    const response = await fetch("/api/intake", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),

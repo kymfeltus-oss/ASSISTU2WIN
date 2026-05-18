@@ -78,7 +78,9 @@ export default function QRIntakeProcessor() {
           : undefined,
       optInToUpdates:
         commPlan.communicationPreferences.market_update_email_enabled,
-      welcomeEmailEnabled: true,
+      welcomeEmailEnabled: commPlan.welcomeEmailEnabled,
+      communication_preferences: commPlan.communicationPreferences,
+      repAgreementPending: commPlan.repAgreementPending,
       campaignId: qrParams.source ?? undefined,
       location: qrParams.location ?? undefined,
     });

@@ -72,6 +72,7 @@ export async function proxy(request: NextRequest) {
   const isCopilotIntakeWebhook =
     request.nextUrl.pathname === "/api/copilot-intake";
   const isPublicLeadIntake =
+    request.nextUrl.pathname === "/api/intake" ||
     request.nextUrl.pathname === "/api/leads/public-intake";
   const isPublicIntakePage = request.nextUrl.pathname.startsWith("/intake");
   const isPublicScanPage = request.nextUrl.pathname.startsWith("/scan");

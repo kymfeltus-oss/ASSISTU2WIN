@@ -8,7 +8,17 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-/** @deprecated Prefer POST /api/intake */
+function jsonError(
+  status: number,
+  message: string,
+): NextResponse<PublicLeadIntakeFailure> {
+  return NextResponse.json({ ok: false, message }, { status });
+}
+
+/**
+ * Public QR / landing-page intake.
+ * Persists automation toggles on `public.leads.communication_preferences` (jsonb).
+ */
 export async function POST(
   request: Request,
 ): Promise<NextResponse<PublicLeadIntakeSuccess | PublicLeadIntakeFailure>> {
@@ -16,26 +26,20 @@ export async function POST(
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { ok: false, message: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return jsonError(400, "Request body must be valid JSON.");
   }
 
   const formData = parsePublicLeadIntakeRequestBody(body);
   if (!formData) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Name, email, phone, and preferred contact channel are required.",
-      },
-      { status: 400 },
+    return jsonError(
+      400,
+      "Name, email, phone, and preferred contact channel are required.",
     );
   }
 
   const result = await handleLeadIntake(formData);
   if (!result.ok) {
-    return NextResponse.json({ ok: false, message: result.message }, { status: 500 });
+    return jsonError(500, result.message);
   }
 
   return NextResponse.json(result, { status: 201 });
