@@ -16,17 +16,76 @@ import { getPotentialHudTier } from "@/lib/leads/potential-index";
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { ActivityFeed, type Activity } from "@/components/dashboard/ActivityFeed";
+import { DashboardUtilityBar } from "@/components/dashboard/DashboardUtilityBar";
+import { PipelineStatusTracker } from "@/components/dashboard/PipelineStatusTracker";
 import {
-  APP_MAIN_GRID,
-  MUTED,
-  SECTION_HEADING,
-} from "@/components/dashboard/AgentCommandShell";
+  UrgentMilestones,
+  type Milestone,
+} from "@/components/dashboard/UrgentMilestones";
+import { MUTED, SECTION_HEADING } from "@/components/dashboard/AgentCommandShell";
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+
+/** Visual-only sample data for dashboard panels (does not alter lead queries). */
+const URGENT_MILESTONES_SAMPLE: readonly Milestone[] = [
+  {
+    id: "1",
+    title: "Option Period Ends Today",
+    property: "123 Oak Street",
+    dueTime: "Due in 3 hours",
+    urgency: "critical",
+  },
+  {
+    id: "2",
+    title: "Financing Approval Due",
+    property: "456 Maple Avenue",
+    dueTime: "Due in 2 days",
+    urgency: "warning",
+  },
+  {
+    id: "3",
+    title: "Closing Day",
+    property: "789 Pine Drive",
+    dueTime: "May 24, 2026",
+    urgency: "normal",
+  },
+] as const;
+
+const ACTIVITY_FEED_SAMPLE: readonly Activity[] = [
+  {
+    id: "1",
+    type: "feedback",
+    title: "Showing Feedback Received",
+    property: "123 Main St",
+    description: "Client loved the kitchen, price seems high",
+    timestamp: "15 min ago",
+  },
+  {
+    id: "2",
+    type: "offer",
+    title: "New Offer Submitted",
+    property: "3BR Condo - Downtown",
+    description: "$465K Offer Price",
+    timestamp: "1 hour ago",
+  },
+] as const;
+
+const ADD_LEAD_BUTTON_CLASS =
+  "inline-flex min-h-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-button)] px-4 text-[13px] font-bold tracking-[0.04em] text-white uppercase transition duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98]";
+
+const ADD_LEAD_BUTTON_STYLE = {
+  background: "var(--gradient-cyan)",
+  boxShadow:
+    "0 4px 16px rgba(0, 0, 0, 0.25), 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 242, 254, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+} as const;
 
 /* Leads OS — primary dashboard home (/dashboard) */
 
-type QuickStat = { readonly label: string; readonly value: string };
+type QuickStat = {
+  readonly label: string;
+  readonly value: string;
+  readonly subtext?: string;
+};
 type QuickAction = {
   readonly label: string;
   readonly href: string;
@@ -648,15 +707,22 @@ function SectionTitle({
   title,
   actionHref,
   actionLabel,
+  addLeadHref,
 }: {
   readonly title: string;
   readonly actionHref?: string;
   readonly actionLabel?: string;
+  readonly addLeadHref?: string;
 }) {
   return (
     <div className="mb-2.5 flex items-center justify-between gap-2">
       <h2 className={SECTION_HEADING}>{title}</h2>
-      {actionHref && actionLabel ? (
+      {addLeadHref ? (
+        <Link href={addLeadHref} className={ADD_LEAD_BUTTON_CLASS} style={ADD_LEAD_BUTTON_STYLE}>
+          + Add Lead
+        </Link>
+      ) : null}
+      {!addLeadHref && actionHref && actionLabel ? (
         <Link
           href={actionHref}
           className="shrink-0 py-1 text-[10px] font-semibold text-[#00F2FE] sm:text-xs"
@@ -665,6 +731,56 @@ function SectionTitle({
         </Link>
       ) : null}
     </div>
+  );
+}
+
+function PendingTasksPanel({
+  actions,
+  loading,
+}: {
+  readonly actions: readonly LeadInsightAction[];
+  readonly loading: boolean;
+}) {
+  const mediumTasks = actions.filter((action) => action.priority !== "high");
+
+  return (
+    <section
+      className={`${CARD_NORMAL} flex min-h-0 flex-col overflow-hidden lg:max-h-[calc(100dvh-3rem)]`}
+    >
+      <div className="shrink-0 border-b border-[#1E2A44] px-4 py-4 sm:px-5">
+        <p className="text-[10px] font-semibold tracking-[0.08em] text-[color:var(--text-muted)] uppercase">
+          Follow-through
+        </p>
+        <h2 className="mt-1 text-lg font-bold text-[color:var(--text-primary)]">
+          Pending items
+        </h2>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        {loading ? (
+          <p className={`text-sm ${MUTED}`}>Loading pending items…</p>
+        ) : mediumTasks.length === 0 ? (
+          <p className={`text-sm ${MUTED}`}>No medium-priority tasks in queue.</p>
+        ) : (
+          <ul className="space-y-2">
+            {mediumTasks.map((action) => (
+              <li
+                key={action.id}
+                className={`${CARD_NORMAL} rounded-xl p-3 transition duration-300 hover:translate-x-1`}
+                style={{
+                  boxShadow:
+                    "0 4px 16px rgba(0, 0, 0, 0.25), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
+                }}
+              >
+                <p className="text-xs font-semibold text-[color:var(--text-primary)]">
+                  {action.leadName}
+                </p>
+                <p className={`mt-0.5 text-sm ${MUTED}`}>{action.label}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -897,12 +1013,9 @@ function ReadyToWritePanel({
 }
 
 function DashboardLeadsOsScreen() {
-  const pathname = usePathname();
   const drawerTitleId = useId();
-  const desktopAiTitleId = useId();
   const [aiOpen, setAiOpen] = useState(false);
   const { leads, loading, statusMessage } = useLeads();
-  const isAddLeadActive = pathname.startsWith("/dashboard/leads/intake");
 
   const closeAi = useCallback(() => setAiOpen(false), []);
   const openAi = useCallback(() => setAiOpen(true), []);
@@ -951,8 +1064,8 @@ function DashboardLeadsOsScreen() {
 
   return (
     <>
-      <div className={APP_MAIN_GRID}>
-        <main className="min-w-0">
+      <div className="flex w-full min-w-0 flex-wrap items-start gap-4 md:gap-6">
+        <main className="min-w-0 flex-1" style={{ minWidth: "320px" }}>
             <div className="flex min-h-dvh w-full min-w-0 flex-col">
           <header className="mb-5 flex flex-wrap items-center gap-3 pt-1 lg:pt-4">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
@@ -969,21 +1082,19 @@ function DashboardLeadsOsScreen() {
               <p className="text-[9px] font-bold tracking-[0.22em] text-[#00F2FE]/80 uppercase lg:hidden">
                 Assist U2 Win
               </p>
-              <h1 className="text-lg font-bold tracking-tight text-[#F8FAFC] sm:text-xl lg:text-2xl">
-                Today&apos;s Agent Command
+              <h1 className="flex flex-wrap items-baseline gap-x-2 gap-y-0 leading-none">
+                <span className="dashboard-title-script text-[clamp(42px,6vw,56px)]">
+                  Agent
+                </span>
+                <span className="dashboard-title-bold text-[clamp(32px,5vw,42px)]">
+                  Command
+                </span>
               </h1>
               <p className={`mt-1 hidden text-sm md:block ${MUTED}`}>
                 Revenue command board for your active buyer pipeline.
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <Link
-                href="/dashboard/leads/intake"
-                aria-current={isAddLeadActive ? "page" : undefined}
-                className={dashboardHeaderActionLinkClass(isAddLeadActive)}
-              >
-                + Add New Lead
-              </Link>
               <form action="/api/auth/signout" method="POST" className="lg:hidden">
                 <button
                   type="submit"
@@ -994,6 +1105,8 @@ function DashboardLeadsOsScreen() {
               </form>
             </div>
           </header>
+
+          <DashboardUtilityBar />
 
         {statusMessage ? (
           <p
@@ -1042,27 +1155,39 @@ function DashboardLeadsOsScreen() {
                   className="mx-auto hidden shrink-0 sm:mx-0 md:block"
                 />
               </div>
-              <div className="relative mt-4 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-            {quickStats.map((stat) => (
+              <div className="relative mt-4 flex flex-wrap gap-2 sm:gap-3">
+            {quickStats.map((stat, index) => {
+              const isPendingPipeline = index === 3;
+              const label = isPendingPipeline ? "Pending Pipeline" : stat.label;
+              const value = isPendingPipeline ? "$42K" : stat.value;
+              const subtext = isPendingPipeline ? "5 in Escrow" : stat.subtext;
+              return (
               <div
                 key={stat.label}
                 className="rounded-xl border border-[#1E2A44] bg-[#0B1020]/80 px-3 py-2.5"
+                style={{ minWidth: "220px", flex: "1 1 220px" }}
               >
                 <p className={`text-[9px] font-semibold tracking-[0.14em] uppercase ${MUTED}`}>
-                  {stat.label}
+                  {label}
                 </p>
-                <p className="mt-0.5 text-base font-bold text-[#F8FAFC]">{stat.value}</p>
+                <p className="mt-0.5 text-base font-bold text-[#F8FAFC]">{value}</p>
+                {subtext ? (
+                  <p className={`mt-0.5 text-[10px] ${MUTED}`}>{subtext}</p>
+                ) : null}
               </div>
-            ))}
+              );
+            })}
           </div>
             </section>
 
-            <div className={SECTION_GRID}>
-              <section className="min-w-0 md:col-span-2">
+            <PipelineStatusTracker />
+
+            <div className="flex w-full min-w-0 flex-wrap gap-4 md:gap-6">
+              <div className="min-w-0 flex-1 space-y-5 lg:space-y-6" style={{ minWidth: "320px" }}>
+              <section className="min-w-0">
                 <SectionTitle
                   title="Priority Buyer List"
-                  actionHref="/dashboard/leads"
-                  actionLabel="All buyers"
+                  addLeadHref="/dashboard/leads/new"
                 />
                 {loading ? (
                   <p className={`text-sm ${MUTED}`}>Loading priority buyers…</p>
@@ -1082,6 +1207,9 @@ function DashboardLeadsOsScreen() {
                 )}
               </section>
 
+              <ActivityFeed activities={ACTIVITY_FEED_SAMPLE} />
+
+            <div className={SECTION_GRID}>
               <section className="min-w-0">
                 <SectionTitle title="Today's Execution List" />
                 <TodaysExecutionPanel actions={executionActions} loading={loading} />
@@ -1174,17 +1302,16 @@ function DashboardLeadsOsScreen() {
                 </div>
               </section>
             </div>
+              </div>
+
+              <div className="flex w-full min-w-0 flex-col gap-4 lg:w-[320px]">
+                <UrgentMilestones milestones={URGENT_MILESTONES_SAMPLE} />
+                <PendingTasksPanel actions={executionActions} loading={loading} />
+              </div>
+            </div>
           </div>
         </div>
       </main>
-
-      <div className="hidden min-w-0 lg:block">
-        <AiAssistantPanel
-          insights={insights}
-          loading={loading}
-          titleId={desktopAiTitleId}
-        />
-      </div>
     </div>
 
     <button

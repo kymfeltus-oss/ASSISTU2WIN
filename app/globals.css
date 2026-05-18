@@ -7,11 +7,23 @@
    -------------------------------------------------------------------------- */
 
 :root {
-  /* 1. Primary background (large surfaces) */
-  --bg1: #080c1a;
-  --bg2: #0b1020;
-  --bg3: #050713;
+  /* 1. Primary background (large surfaces) — dark top → lighter bottom ombre */
+  --bg1: #030712;
+  --bg2: #0a1018;
+  --bg3: #0f1419;
+  --bg4: #1b2838;
   --accent-glow: rgba(0, 242, 254, 0.12);
+
+  /* Extended accent palette */
+  --violet: #a78bfa;
+  --gold: #fbbf24;
+  --coral: #fb7185;
+  --gradient-cyan: linear-gradient(135deg, #00f2fe 0%, #0ea5e9 100%);
+  --gradient-violet: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  --gradient-gold: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  --gradient-coral: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  --radius-button: 12px;
+  --touch-target-min: 44px;
 
   /* 2. Panels & cards */
   --panel: #111827;
@@ -34,14 +46,20 @@
   /* Featured panel (cyan edge — unchanged behavior) */
   --panel-featured: rgba(22, 28, 49, 0.75);
 
-  /* Layered app canvas: linear base + top-right cyan radial */
+  /* Layered app canvas: dark top → warm lighter bottom + cyan lift */
   --bg-canvas:
     radial-gradient(
       ellipse 72% 58% at 100% 0%,
       var(--accent-glow),
       transparent 62%
     ),
-    linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 48%, var(--bg3) 100%);
+    linear-gradient(
+      180deg,
+      var(--bg1) 0%,
+      var(--bg2) 25%,
+      var(--bg3) 60%,
+      var(--bg4) 100%
+    );
 
   --ambient-sheen: radial-gradient(
     ellipse 55% 40% at 50% 0%,
@@ -101,4 +119,47 @@ body {
   min-height: 100%;
   color: var(--text-primary);
   font-family: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--violet) 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--violet) 80%);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+}
+
+.dashboard-title-script {
+  font-family: var(--font-great-vibes), "Great Vibes", cursive;
+  font-weight: 400;
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--violet) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(0, 242, 254, 0.3));
+}
+
+.dashboard-title-bold {
+  font-weight: 800;
+  background: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    rgba(248, 250, 252, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
