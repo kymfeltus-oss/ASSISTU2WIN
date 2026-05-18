@@ -1,0 +1,197 @@
+# Assist U2 Win Change Protection Lock
+
+## PURPOSE
+This repository is under strict production-style protection.
+
+Cursor must preserve:
+• existing functionality
+• existing flows
+• existing layouts
+• existing wording
+• existing colors
+• existing visual hierarchy
+• existing navigation behavior
+• existing spacing/alignment
+• existing business logic
+• existing integrations
+
+Unless the user EXPLICITLY requests a change.
+
+---
+
+# CORE RULE
+
+DO NOT:
+• rewrite existing files unnecessarily
+• refactor working systems
+• redesign pages
+• replace layouts
+• replace component architecture
+• rename labels/text/verbiage
+• alter spacing/padding/margins
+• alter colors/themes
+• alter typography
+• alter animations
+• alter hover states
+• alter button styling
+• alter dashboard structure
+• alter navigation structure
+• alter routing behavior
+• alter authentication
+• alter APIs
+• alter Supabase integrations
+• alter RLS
+• alter proxy.ts
+• alter middleware
+• alter global styles
+• alter app shell behavior
+• alter analytics calculations
+• alter existing intake functionality
+
+unless the user explicitly instructs it.
+
+---
+
+# MINIMAL CHANGE POLICY
+
+All changes must follow:
+
+1. Minimal Surface Area
+Only modify the smallest possible amount of code required.
+
+2. Surgical Changes
+Do not rewrite entire files when only a small edit is required.
+
+3. Preserve Existing Behavior
+Assume all existing behavior is intentional and production-approved.
+
+4. Preserve Existing Design
+Do not change:
+• wording
+• alignment
+• visuals
+• spacing
+• styling
+• app layout
+unless explicitly requested.
+
+5. Preserve Existing Flow
+Do not change:
+• routing
+• redirects
+• auth flow
+• intake flow
+• analytics flow
+• lead flow
+unless explicitly requested.
+
+---
+
+# FILE SAFETY
+
+Before modifying any file:
+Cursor must determine:
+• why this exact file is required
+• whether another file already controls the feature
+• whether the requested change can be isolated safely
+
+If a request targets:
+• one button
+• one route
+• one dropdown
+• one label
+• one field
+
+THEN ONLY CHANGE THAT EXACT THING.
+
+Do not opportunistically improve unrelated code.
+
+---
+
+# APP DESIGN LOCK
+
+Assist U2 Win uses a locked visual system.
+
+Do NOT alter:
+• midnight/cyan palette
+• app shell layout
+• panel system
+• dashboard structure
+• operational density
+• typography hierarchy
+• spacing rhythm
+• border radius system
+• glow system
+• mobile app behavior
+• bottom nav behavior
+• desktop rail behavior
+
+unless explicitly requested.
+
+---
+
+# ANALYTICS PAGE LOCK
+
+The approved analytics experience is:
+• app-style operational dashboard
+• not a marketing page
+• not a generic admin dashboard
+• not a slate/emerald template
+• not telemetry/system monitoring UI
+
+Approved canonical route:
+`/dashboard/analytics`
+
+Do not revive legacy analytics screens.
+
+---
+
+# REQUIRED RESPONSE FORMAT
+
+Before making changes, Cursor should internally follow:
+
+TASK:
+What exact thing is changing?
+
+TARGET FILE:
+Which exact file controls it?
+
+WHY:
+Why is this file required?
+
+CHANGE:
+What exact code is changing?
+
+DO NOT CHANGE:
+What systems/files are protected?
+
+ACCEPTANCE CHECK:
+What exact outcome must happen?
+
+---
+
+# WHEN UNSURE
+
+If changing something may:
+• break functionality
+• alter visuals
+• alter wording
+• alter flow
+• alter analytics behavior
+• alter integrations
+
+Cursor should preserve the existing implementation and avoid broad rewrites.
+
+---
+
+# PRIORITY
+
+Stability and preservation take priority over:
+• refactoring
+• optimization
+• cleanup
+• modernization
+• architecture changes
+• stylistic preferences
+
+Existing working production behavior is authoritative.

@@ -5,6 +5,7 @@ import type {
   CommandReportMetrics,
 } from "./command-report-types";
 import styles from "./analytics-command-report.module.css";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 
 type AnalyticsCommandReportProps = {
@@ -50,14 +51,6 @@ export function AnalyticsCommandReport({
     window.print();
   }, []);
 
-  const handlePdf = useCallback(() => {
-    window.alert("PDF export coming soon");
-  }, []);
-
-  const handleCsv = useCallback(() => {
-    window.alert("CSV export coming soon");
-  }, []);
-
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(metrics.copySummary);
@@ -88,12 +81,20 @@ export function AnalyticsCommandReport({
           <button type="button" className={styles.btn} onClick={handlePrint}>
             Print Report
           </button>
-          <button type="button" className={styles.btn} onClick={handlePdf}>
-            Download PDF
-          </button>
-          <button type="button" className={styles.btn} onClick={handleCsv}>
-            Download CSV
-          </button>
+          <Link
+            href="/dashboard/leads/intake"
+            className={styles.btn}
+            style={{ textDecoration: "none" }}
+          >
+            + Add New Lead
+          </Link>
+          <Link
+            href="/dashboard/leads"
+            className={styles.btn}
+            style={{ textDecoration: "none" }}
+          >
+            Manage Buyer Profiles
+          </Link>
           <button
             type="button"
             className={`${styles.btn} ${styles.btnPrimary}`}

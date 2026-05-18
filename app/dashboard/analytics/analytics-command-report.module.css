@@ -113,15 +113,17 @@
 }
 
 .panel {
-  background: rgba(17, 24, 39, 0.82);
-  border: 1px solid #1e2a44;
+  background: var(--panel-alpha);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--line);
   border-radius: 26px;
   box-shadow: 0 20px 60px -35px rgba(0, 0, 0, 0.85);
 }
 
 .featured {
-  background: rgba(22, 28, 49, 0.75);
-  border-top: 2px solid #00f2fe;
+  background: var(--panel-featured);
+  border-top: 2px solid var(--cyan);
   border-bottom: 1px solid rgba(0, 242, 254, 0.55);
   border-right: 1px solid rgba(0, 242, 254, 0.55);
   border-left: 0;

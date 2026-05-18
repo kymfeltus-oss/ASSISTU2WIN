@@ -1,0 +1,65 @@
+---
+description: LOCKED app environment palette — backgrounds, panels, borders, semantic colors (app/globals.css only)
+alwaysApply: true
+---
+
+# Assist U2 Win — App Environment Palette (LOCKED)
+
+**Do not change these values** unless the user explicitly requests a palette update.
+**Do not** scatter duplicate hex/rgba in components — use CSS variables from `app/globals.css`.
+
+## Single source of truth
+
+All tokens live in `app/globals.css` `:root`. Root `body` uses `.midnight-canvas-gradient`.
+
+## 1. Primary background (large surfaces)
+
+| Variable | Value | Use |
+|----------|-------|-----|
+| `--bg1` | `#080C1A` | Gradient top (deep base) |
+| `--bg2` | `#0B1020` | Gradient mid |
+| `--bg3` | `#050713` | Gradient bottom |
+| `--accent-glow` | `rgba(0, 242, 254, 0.12)` | Top-right cyan radial |
+| `--bg-canvas` | linear + radial composite | Full app background |
+
+**Usage:** `body.midnight-canvas-gradient` or `var(--bg-canvas)` — never legacy plum stops (`#352a42`, `#1a1524`) or flat `#141A30` / `#0E1222`.
+
+## 2. Panels & cards
+
+| Variable | Value | Use |
+|----------|-------|-----|
+| `--panel` | `#111827` | Solid panel base |
+| `--panel2` | `#161C31` | Nested / internal panels |
+| `--panel-alpha` | `rgba(17, 24, 39, 0.82)` | Glass `.panel` class |
+| `--row-surface` | `rgba(255, 255, 255, 0.045)` | List rows / matrix cells |
+| `--panel-featured` | `rgba(22, 28, 49, 0.75)` | Featured cyan-edge cards |
+
+**Usage:** class `.panel` (blur 24px) or `AgentCommandShell` `PANEL` / `CARD_NORMAL`.
+
+## 3. Borders & accents
+
+| Variable | Value | Use |
+|----------|-------|-----|
+| `--line` | `#1E2A44` | Default panel border |
+| `--row-line` | `rgba(255, 255, 255, 0.08)` | Row dividers |
+| `--cyan` | `#00F2FE` | Featured borders, active UI |
+
+## 4. Semantic UI
+
+| Variable | Value | Use |
+|----------|-------|-----|
+| `--text-primary` | `#F8FAFC` | Headings |
+| `--text-muted` | `#94A3B8` | Labels, sub-text |
+| `--cyan` | `#00F2FE` | KPIs, active links |
+| `--semantic-success` | `#18E28F` | Ready / cash |
+| `--semantic-warning` | `#FFBD59` | Friction / pending |
+| `--semantic-danger` | `#FF4F7B` | Risk |
+
+## Shell rule
+
+`APP_SHELL_BG` must stay **transparent** so the root gradient is visible. Do not paint a flat `--bg1` over the full shell.
+
+## Scope
+
+- **Do** adjust only `app/globals.css` for palette changes.
+- **Do not** change layout, spacing, typography, or component structure when updating colors.

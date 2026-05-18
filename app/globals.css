@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
+/* --------------------------------------------------------------------------
+   Assist U2 Win — App Environment Palette (single source of truth)
+   Do not duplicate these hex/rgba values in components — use var(--*) or
+   utilities: midnight-canvas-gradient, .panel, .app-row-surface
+   -------------------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 1. Primary background (large surfaces) */
+  --bg1: #080c1a;
+  --bg2: #0b1020;
+  --bg3: #050713;
+  --accent-glow: rgba(0, 242, 254, 0.12);
+
+  /* 2. Panels & cards */
+  --panel: #111827;
+  --panel2: #161c31;
+  --panel-alpha: rgba(17, 24, 39, 0.82);
+  --row-surface: rgba(255, 255, 255, 0.045);
+
+  /* 3. Borders & accents */
+  --line: #1e2a44;
+  --row-line: rgba(255, 255, 255, 0.08);
+  --cyan: #00f2fe;
+
+  /* 4. Semantic UI */
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --semantic-success: #18e28f;
+  --semantic-warning: #ffbd59;
+  --semantic-danger: #ff4f7b;
+
+  /* Featured panel (cyan edge — unchanged behavior) */
+  --panel-featured: rgba(22, 28, 49, 0.75);
+
+  /* Layered app canvas: linear base + top-right cyan radial */
+  --bg-canvas:
+    radial-gradient(
+      ellipse 72% 58% at 100% 0%,
+      var(--accent-glow),
+      transparent 62%
+    ),
+    linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 48%, var(--bg3) 100%);
+
+  --ambient-sheen: radial-gradient(
+    ellipse 55% 40% at 50% 0%,
+    rgba(0, 242, 254, 0.06),
+    transparent 70%
+  );
+
+  --background: var(--bg1);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-bg1: var(--bg1);
+  --color-bg2: var(--bg2);
+  --color-bg3: var(--bg3);
+  --color-panel: var(--panel);
+  --color-panel2: var(--panel2);
+  --color-line: var(--line);
+  --color-cyan: var(--cyan);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-success: var(--semantic-success);
+  --color-warning: var(--semantic-warning);
+  --color-danger: var(--semantic-danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Full-page app environment gradient */
+.midnight-canvas-gradient {
+  background-color: var(--bg3);
+  background-image: var(--bg-canvas);
+  background-attachment: fixed;
+}
+
+/* Optional soft top lift — stack on a fixed overlay in layout if needed */
+.midnight-canvas-sheen {
+  background-image: var(--ambient-sheen);
+}
+
+/* Standard glass panel (analytics .panel, shared surfaces) */
+.panel {
+  background: var(--panel-alpha);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--line);
+}
+
+.app-row-surface {
+  background: var(--row-surface);
+  border: 1px solid var(--row-line);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
 }

@@ -1,0 +1,31 @@
+---
+description: App-wide environment background — linear navy gradient + cyan top-right glow (colors only)
+globs: app/**/*.tsx, app/**/*.css, components/**/*.tsx, components/**/*.ts, tailwind.config.js
+alwaysApply: true
+---
+
+# AssistU2Win — App Environment Background
+
+## Single source of truth
+
+`app/globals.css` — see also **locked palette** in `assistu2win-app-environment-palette.mdc`.
+
+- `--bg-canvas` — `linear-gradient` (`--bg1` → `--bg2` → `--bg3`) + top-right `radial-gradient` (`--accent-glow`)
+- Utility: `.midnight-canvas-gradient` on `body` in `app/layout.tsx`
+- Optional: `.midnight-canvas-sheen` for extra top lift (`--ambient-sheen`)
+
+## Required usage
+
+- Root `body`: `.midnight-canvas-gradient`
+- Public intake backdrop: `midnight-canvas-gradient` class (via `midnightBackdrop` in `midnight-silk-theme.ts`)
+- Dashboard shell: `APP_SHELL_BG` stays transparent — do not block the body gradient
+
+## Forbidden (legacy)
+
+- Plum ombre stops: `#352a42`, `#1a1524`, `#07040b` as canvas
+- Flat legacy diagonals: `#141A30`, `#0E1222`, `#090B15`
+- Inline full-page background hex on new screens
+
+## Scope
+
+- **Colors/background tokens only** — do not change layout, cards, buttons, or typography when applying this rule.

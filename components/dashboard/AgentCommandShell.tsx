@@ -6,18 +6,19 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const CARD_NORMAL =
-  "bg-[#111827]/80 border border-[#1E2A44] rounded-2xl shadow-[0_20px_60px_-35px_rgba(0,0,0,0.85)]";
+  "rounded-2xl border border-[color:var(--line)] bg-[color:var(--panel-alpha)] shadow-[0_20px_60px_-35px_rgba(0,0,0,0.85)] backdrop-blur-xl";
 
 export const CARD_FEATURED =
-  "bg-[rgba(22,28,49,0.75)] backdrop-blur-xl border-t-2 border-b border-r border-l-0 border-[#00F2FE] rounded-2xl shadow-[0_-10px_30px_-18px_rgba(0,242,254,0.75),_10px_0_30px_-20px_rgba(0,242,254,0.45),_0_20px_60px_-35px_rgba(0,0,0,0.85)]";
+  "rounded-2xl border-t-2 border-b border-r border-l-0 border-[color:var(--cyan)] bg-[color:var(--panel-featured)] shadow-[0_-10px_30px_-18px_rgba(0,242,254,0.75),_10px_0_30px_-20px_rgba(0,242,254,0.45),_0_20px_60px_-35px_rgba(0,0,0,0.85)] backdrop-blur-xl";
 
+/** Transparent shell so root `body` gradient (--bg-canvas) shows through. */
 export const APP_SHELL_BG =
-  "relative min-h-dvh w-full overflow-x-hidden bg-[#080C1A] text-[#F8FAFC]";
+  "relative min-h-dvh w-full overflow-x-hidden bg-transparent text-[color:var(--text-primary)]";
 
-export const MUTED = "text-[#94A3B8]";
+export const MUTED = "text-[color:var(--text-muted)]";
 
 export const SECTION_HEADING =
-  "text-[10px] font-semibold tracking-[0.18em] text-[#94A3B8] uppercase sm:text-[11px]";
+  "text-[10px] font-semibold tracking-[0.18em] text-[color:var(--text-muted)] uppercase sm:text-[11px]";
 
 export const PAGE_CONTAINER =
   "mx-auto w-full max-w-[1600px] px-4 pt-3 pb-28 sm:px-5 md:px-6 md:pb-28 lg:px-8 lg:pt-4 lg:pb-8";
@@ -33,7 +34,7 @@ export const SECTION_GRID =
   "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4";
 
 export const PANEL =
-  "min-w-0 overflow-visible rounded-2xl border border-[#1E2A44] bg-[#111827]/80 p-4 sm:p-5";
+  "panel min-w-0 overflow-visible rounded-2xl p-4 sm:p-5";
 
 export const TOUCH_TARGET =
   "min-h-11 min-w-11 touch-manipulation";
@@ -240,7 +241,7 @@ export function AppRail({ pathname }: { readonly pathname: string }) {
 export function BottomAppNav({ pathname }: { readonly pathname: string }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 w-full max-w-[100vw] border-t border-[#1E2A44] bg-[#080C1A]/95 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 w-full max-w-[100vw] border-t border-[color:var(--line)] bg-[color:var(--bg1)]/95 backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       aria-label="Dashboard navigation"
     >
