@@ -1,13 +1,12 @@
 "use client";
 
 import { BottomNavIcon } from "@/components/navigation/BottomNavIcon";
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
+import { BrandLogo } from "@/components/BrandLogo";
 import {
   ASSISTU2WIN_BOTTOM_NAV,
   isBottomNavItemActive,
   type BottomNavItem,
 } from "@/lib/navigation/bottom-nav";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -149,14 +148,7 @@ export function AppRail({ pathname }: { readonly pathname: string }) {
     >
       <div className="mb-6 flex items-center gap-3">
         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44]">
-          <Image
-            src={BRAND_LOGO_SRC}
-            alt={BRAND_LOGO_ALT}
-            fill
-            className="object-cover"
-            sizes="40px"
-            unoptimized
-          />
+          <BrandLogo variant="rail" />
         </div>
         <div className="min-w-0">
           <p className="text-[9px] font-bold tracking-[0.2em] text-[#00F2FE]/80 uppercase">

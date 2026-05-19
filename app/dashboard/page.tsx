@@ -1,7 +1,9 @@
 ﻿"use client";
 
+import { AppBrand } from "@/components/AppBrand";
 import { LeadsProvider, useLeads } from "@/components/leads/LeadsProvider";
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
+import { BrandLogo } from "@/components/BrandLogo";
+import cinematicStyles from "./dashboard-cinematic.module.css";
 import {
   buildAiActions,
   formatLeadBudget,
@@ -14,7 +16,6 @@ import {
 } from "@/lib/leads/lead-insights";
 import { getPotentialHudTier } from "@/lib/leads/potential-index";
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
-import Image from "next/image";
 import Link from "next/link";
 import { ActivityFeed, type Activity } from "@/components/dashboard/ActivityFeed";
 import { DashboardUtilityBar } from "@/components/dashboard/DashboardUtilityBar";
@@ -27,10 +28,10 @@ import { MUTED, SECTION_HEADING } from "@/components/dashboard/AgentCommandShell
 import { DollarSign, Home, TrendingUp, Users, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
-const AMBIENT_OVERLAY_STYLE = {
-  background:
-    "radial-gradient(circle at 20% 10%, rgba(0, 242, 254, 0.12) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 191, 36, 0.04) 0%, transparent 60%)",
-} as const;
+const C = cinematicStyles;
+
+const CINEMATIC_PAGE_BG =
+  "radial-gradient(circle at top left, rgba(0,242,254,.14), transparent 32%), radial-gradient(circle at top right, rgba(167,139,250,.10), transparent 28%), linear-gradient(180deg, #020617 0%, #07111d 25%, #0b1524 55%, #0f172a 100%)";
 
 const PREMIUM_CARD_SHADOW =
   "0 4px 16px rgba(0, 0, 0, 0.25), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)";
@@ -123,11 +124,9 @@ const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "Lender", href: "/dashboard/lender", icon: "lender" },
 ] as const;
 
-const CARD_NORMAL =
-  "bg-[#111827]/80 border border-[#1E2A44] rounded-2xl shadow-[0_20px_60px_-35px_rgba(0,0,0,0.85)]";
+const CARD_NORMAL = `${C.glass} ${C.panelInner}`;
 
-const CARD_FEATURED =
-  "bg-[rgba(22,28,49,0.75)] backdrop-blur-xl border-t-2 border-b border-r border-l-0 border-[#00F2FE] rounded-2xl shadow-[0_-10px_30px_-18px_rgba(0,242,254,0.75),_10px_0_30px_-20px_rgba(0,242,254,0.45),_0_20px_60px_-35px_rgba(0,0,0,0.85)] transition-all duration-300";
+const CARD_FEATURED = `${C.glass} ${C.panelInner} border-t-2 border-[#00F2FE] shadow-[0_-10px_30px_-18px_rgba(0,242,254,0.35),0_0_40px_rgba(0,242,254,0.12)] transition-all duration-300`;
 
 const SECTION_GRID =
   "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:gap-5";
@@ -166,6 +165,35 @@ function formatCommissionEstimate(total: number): string {
   if (estimate >= 1_000_000) return `$${(estimate / 1_000_000).toFixed(1)}M`;
   if (estimate >= 1000) return `$${Math.round(estimate / 1000)}k`;
   return `$${Math.round(estimate)}`;
+}
+
+type TopAreaRow = {
+  readonly area: string;
+  readonly volume: number;
+  readonly leadCount: number;
+  readonly topScore: number;
+};
+
+function buildTopPerformingAreas(leads: readonly LeadRecord[]): readonly TopAreaRow[] {
+  const map = new Map<string, { volume: number; count: number; topScore: number }>();
+  for (const lead of leads) {
+    const area = getLeadAreaLabel(lead);
+    const prev = map.get(area) ?? { volume: 0, count: 0, topScore: 0 };
+    map.set(area, {
+      volume: prev.volume + (lead.target_budget ?? 0),
+      count: prev.count + 1,
+      topScore: Math.max(prev.topScore, lead.market_readiness_score),
+    });
+  }
+  return [...map.entries()]
+    .map(([area, data]) => ({
+      area,
+      volume: data.volume,
+      leadCount: data.count,
+      topScore: data.topScore,
+    }))
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 4);
 }
 
 function computeAveragePbi(leads: readonly LeadRecord[]): number {
@@ -467,6 +495,38 @@ function EmptyStatePanel({
 }
 
 type KpiAccent = "cyan" | "green" | "amber";
+
+function CinematicStatCard({
+  label,
+  value,
+  subtext,
+  icon: Icon,
+  accent,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly subtext?: string;
+  readonly icon: LucideIcon;
+  readonly accent: KpiAccent;
+}) {
+  const accentColor =
+    accent === "cyan"
+      ? "#00f2fe"
+      : accent === "green"
+        ? "#18e28f"
+        : "#fbbf24";
+
+  return (
+    <div className={`${C.glass} ${C.statCard}`}>
+      <div className={C.iconCircle} style={{ color: accentColor }}>
+        <Icon className="h-6 w-6" aria-hidden />
+      </div>
+      <p className={C.statTitle}>{label}</p>
+      <p className={C.statValue}>{value}</p>
+      {subtext ? <p className={C.statSub}>{subtext}</p> : null}
+    </div>
+  );
+}
 
 function DashboardKpiCard({
   label,
@@ -1206,6 +1266,7 @@ function DashboardLeadsOsScreen() {
     [activeLeads],
   );
   const readyToWriteLeads = useMemo(() => getReadyToWriteLeads(activeLeads), [activeLeads]);
+  const topAreas = useMemo(() => buildTopPerformingAreas(activeLeads), [activeLeads]);
 
   const quickStats = useMemo((): readonly QuickStat[] => {
     const potentialCount = getHotBuyers(activeLeads).length;
@@ -1238,111 +1299,197 @@ function DashboardLeadsOsScreen() {
         : "Your pipeline is on track — here's what's happening today."
       : "Add buyers to activate your command board.";
 
+  const insightHeadline =
+    insights.nextAction ??
+    insights.conversionWarning ??
+    "Your AI command center is analyzing active buyers and market signals.";
+
+  const kpiIcons = [Users, Home, Users, TrendingUp] as const;
+  const kpiAccents: readonly KpiAccent[] = ["green", "cyan", "green", "amber"];
+
   return (
     <>
       <div
-        className="relative w-full min-w-0 app-overflow-x-clip"
-        style={{ fontFamily: "var(--font-geist-sans), Inter, system-ui, sans-serif" }}
+        className={`${C.dashboard} relative w-full min-w-0 app-overflow-x-clip`}
+        style={{ background: CINEMATIC_PAGE_BG }}
       >
-        <div
-          className="pointer-events-none fixed inset-0 z-0"
-          style={AMBIENT_OVERLAY_STYLE}
-          aria-hidden
-        />
-      <div className="relative z-10 flex w-full min-w-0 flex-wrap items-start gap-4 md:gap-6">
-        <main className="min-w-0 flex-1">
-            <div className="flex w-full min-w-0 flex-col">
-          <DashboardUtilityBar />
-          <div className="mt-4 flex min-w-0 flex-col gap-4 md:gap-6">
-          <header className="flex min-w-0 flex-col gap-3 pt-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#1E2A44] lg:hidden">
-                <Image
-                  src={BRAND_LOGO_SRC}
-                  alt={BRAND_LOGO_ALT}
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                  unoptimized
-                />
+        <div className={`${C.bgGlow} ${C.glow1}`} aria-hidden />
+        <div className={`${C.bgGlow} ${C.glow2}`} aria-hidden />
+
+        <DashboardUtilityBar />
+
+        <header className={C.topbar}>
+          <div className={C.brandWrap}>
+            <div className={`${C.brandRow} hidden sm:flex`}>
+              <span className={C.assist}>ASSIST</span>
+              <div className={C.u2Wrap}>
+                <span className={C.u2}>U2</span>
               </div>
-              <h1
-                className="flex min-w-0 flex-wrap items-baseline gap-3"
-                style={{ fontSize: "clamp(32px, 5vw, 42px)", lineHeight: 1.1 }}
-              >
-                <span className="dashboard-title-script text-[clamp(42px,6vw,56px)] tracking-[0.02em]">
-                  Realtor
-                </span>
-                <span className="dashboard-title-bold text-[clamp(32px,5vw,42px)] tracking-[-0.03em]">
-                  Dashboard
-                </span>
-              </h1>
-              <LiveStatusBadge />
-              <ScoreRing
-                score={hasLeads ? avgPbi : 0}
-                size={56}
-                label="Buyer Readiness"
-                className="ml-auto hidden shrink-0 md:flex"
-              />
-              <form action="/api/auth/signout" method="POST" className="lg:hidden">
-                <button
-                  type="submit"
-                  className={`rounded-lg border border-[#1E2A44] bg-[#0B1020] px-2.5 py-1.5 text-[10px] font-semibold text-[#94A3B8] transition hover:text-[#F8FAFC] ${TOUCH_TARGET}`}
-                >
-                  Sign out
-                </button>
-              </form>
+              <span className={C.win}>WIN</span>
             </div>
-            <p className="text-[15px] font-medium text-[color:var(--text-muted)]">
-              Welcome back! {welcomeLine}
-            </p>
-          </header>
+            <div className="sm:hidden">
+              <AppBrand variant="compact" />
+            </div>
+            <p className={C.subbrand}>The Home Buying Collective</p>
+          </div>
+          <div className={C.profileArea}>
+            <div className={C.avatar} aria-hidden>
+              AI
+            </div>
+            <div className={C.bellWrap}>
+              <div className={C.bell} aria-hidden>
+                ◎
+              </div>
+              {attentionCount > 0 ? (
+                <span className={C.badge}>{attentionCount > 9 ? "9+" : attentionCount}</span>
+              ) : null}
+            </div>
+            <form action="/api/auth/signout" method="POST" className="lg:hidden">
+              <button
+                type="submit"
+                className={`rounded-lg border border-cyan-500/30 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-semibold text-slate-300 transition hover:text-white ${TOUCH_TARGET}`}
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </header>
 
         {statusMessage ? (
-          <p
-            className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90"
-            role="status"
-          >
+          <p className={C.statusBanner} role="status">
             {statusMessage}
           </p>
         ) : null}
 
-            <section className="min-w-0">
-              <p className={`${SECTION_LABEL_CLASS} mb-3`}>Key Metrics</p>
-              <div className="flex min-w-0 flex-wrap gap-3 md:gap-4">
-                <DashboardKpiCard
-                  label={quickStats[0]?.label ?? "Buyer Readiness"}
-                  value={quickStats[0]?.value ?? "-"}
-                  icon={Users}
-                  accent="green"
+        <section className={`${C.hero} ${C.glass}`}>
+          <div className={C.heroContent}>
+            <p className={C.eyebrow}>AI System Status</p>
+            <h1>
+              All Systems <span className={C.heroAccent}>Operational</span>
+            </h1>
+            <p>Welcome back! {welcomeLine}</p>
+            <div className="mt-4 hidden lg:block">
+              <LiveStatusBadge />
+            </div>
+          </div>
+          <div className={C.heroImageWrap}>
+            <BrandLogo variant="hero" priority />
+          </div>
+        </section>
+
+        <section className={C.overview}>
+          <p className={C.sectionLabel}>Overview</p>
+          <div className={C.statsGrid}>
+            {quickStats.map((stat, index) => {
+              const Icon = kpiIcons[index] ?? Users;
+              const accent = kpiAccents[index] ?? "cyan";
+              return (
+                <CinematicStatCard
+                  key={stat.label}
+                  label={stat.label}
+                  value={stat.value}
+                  subtext={index === 3 ? "5 in Escrow" : undefined}
+                  icon={Icon}
+                  accent={accent}
                 />
-                <DashboardKpiCard
-                  label={quickStats[1]?.label ?? "Revenue Pipeline"}
-                  value={quickStats[1]?.value ?? "-"}
-                  icon={Home}
-                  accent="cyan"
-                />
-                <DashboardKpiCard
-                  label={quickStats[2]?.label ?? "Leads"}
-                  value={quickStats[2]?.value ?? "-"}
-                  icon={Users}
-                  accent="green"
-                />
-                <DashboardKpiCard
-                  label="Pending Commission Pipeline"
-                  value="$42K"
-                  subtext="5 in Escrow"
-                  icon={TrendingUp}
-                  accent="amber"
+              );
+            })}
+          </div>
+        </section>
+
+        <div className={C.pipelineWrap}>
+          <PipelineStatusTracker />
+        </div>
+
+        <section className={`${C.insights} ${C.glass}`}>
+          <div className={C.cardTop}>
+            <div>
+              <h2>AI Insights</h2>
+              <p>Priority moves and conversion signals from your active buyers.</p>
+            </div>
+            <Link href="/dashboard/leads/analytics" className={C.cardLink}>
+              View all
+            </Link>
+          </div>
+          <div className={C.insightGrid}>
+            <div className={C.insightCopy}>
+              <h3>Command Intelligence</h3>
+              <p>{loading ? "Loading recommendations…" : insightHeadline}</p>
+              <div className="mt-4 lg:hidden">
+                <AiRecommendationsSection
+                  insights={insights}
+                  loading={loading}
+                  onOpenDrawer={openAi}
+                  showOpenButton
                 />
               </div>
-            </section>
+            </div>
+            <div className={C.chartArea}>
+              <div className={C.chartScore}>
+                <span className={C.chartScoreValue}>{hasLeads ? avgPbi : "—"}</span>
+                Buyer Readiness
+              </div>
+              <svg viewBox="0 0 500 180" className={C.chartSvg} aria-hidden>
+                <defs>
+                  <linearGradient id="dashboardLineGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#00F2FE" />
+                    <stop offset="100%" stopColor="#67E8F9" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0 160 C40 150 50 130 90 125 S130 140 170 100 S240 110 270 90 S330 50 370 70 S420 90 500 35"
+                  fill="none"
+                  stroke="url(#dashboardLineGlow)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-6 hidden lg:block">
+            <CommissionChartPanel pipelineVolume={pipelineVolume} loading={loading} />
+          </div>
+        </section>
 
-            <PipelineStatusTracker />
+        <section className={`${C.areas} ${C.glass}`}>
+          <div className={C.cardTop}>
+            <h2>Top Performing Areas</h2>
+            <Link href="/dashboard/leads/pipeline" className={C.cardLink}>
+              View all
+            </Link>
+          </div>
+          <div className={C.areaList}>
+            {loading ? (
+              <p className={C.muted}>Loading area performance…</p>
+            ) : topAreas.length === 0 ? (
+              <p className={C.muted}>
+                Target neighborhoods will rank here as buyers enter your pipeline.
+              </p>
+            ) : (
+              topAreas.map((row) => (
+                <div key={row.area} className={C.areaRow}>
+                  <div className={C.areaThumb} aria-hidden>
+                    {row.leadCount}
+                  </div>
+                  <div className={C.areaCopy}>
+                    <h4>{row.area}</h4>
+                    <span>
+                      {row.leadCount} active {row.leadCount === 1 ? "buyer" : "buyers"}
+                    </span>
+                  </div>
+                  <div className={C.areaRight}>
+                    <strong>{formatPipelineVolume(row.volume)}</strong>
+                    <span>{row.topScore}% readiness</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
-            <div className="flex w-full min-w-0 flex-wrap gap-4 md:gap-6">
-              <div className="min-w-0 flex-1 space-y-5 lg:space-y-6">
-              <section className="min-w-0">
+        <div className={C.bodyGrid}>
+          <div className={C.mainColumn}>
+            <section className={`${C.contentPanel} ${C.glass}`}>
                 <HotProspectsHeader addLeadHref="/dashboard/leads/new" />
                 {loading ? (
                   <p className={`text-sm ${MUTED}`}>Loading priority buyers…</p>
@@ -1364,9 +1511,7 @@ function DashboardLeadsOsScreen() {
 
               <ActivityFeed activities={ACTIVITY_FEED_SAMPLE} />
 
-            <CommissionChartPanel pipelineVolume={pipelineVolume} loading={loading} />
-
-            <div className={SECTION_GRID}>
+            <div className={`${C.widgetGrid} ${C.contentPanel} ${C.glass}`}>
               <section className="min-w-0">
                 <SectionTitle title="Today's Execution List" />
                 <TodaysExecutionPanel actions={executionActions} loading={loading} />
@@ -1448,7 +1593,7 @@ function DashboardLeadsOsScreen() {
                       href={action.href}
                       className={`${CARD_NORMAL} flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-2xl p-2.5 text-center transition active:scale-95 sm:min-h-24`}
                     >
-                      <span className={`flex items-center justify-center rounded-xl border border-[#1E2A44] bg-[#0B1020] text-[#00F2FE] ${TOUCH_TARGET}`}>
+                      <span className={`flex items-center justify-center rounded-xl border border-cyan-500/20 bg-slate-950/80 text-[#00F2FE] ${TOUCH_TARGET}`}>
                         <IconGlyph kind={action.icon} className="h-5 w-5" />
                       </span>
                       <span className="text-[10px] font-semibold text-[#F8FAFC] sm:text-xs">
@@ -1459,33 +1604,32 @@ function DashboardLeadsOsScreen() {
                 </div>
               </section>
             </div>
-              </div>
+          </div>
 
-              <div className="w-full min-w-0 space-y-4 md:space-y-6 lg:w-full lg:max-w-[var(--app-right-rail-width)] lg:shrink-0 lg:basis-[var(--app-right-rail-width)]">
-                <div>
-                  <p className={`${SECTION_LABEL_CLASS} mb-1`}>Critical Deadlines</p>
-                  <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Urgent Milestones</h2>
-                  <UrgentMilestones milestones={URGENT_MILESTONES_SAMPLE} />
-                </div>
-                <div>
-                  <p className={`${SECTION_LABEL_CLASS} mb-1`}>Tasks &amp; Appointments</p>
-                  <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Pending Items</h2>
-                  <PendingTasksPanel actions={executionActions} loading={loading} />
-                </div>
-              </div>
+          <div className={C.sideColumn}>
+            <div className={`${C.contentPanel} ${C.glass}`}>
+              <p className={`${SECTION_LABEL_CLASS} mb-1`}>Critical Deadlines</p>
+              <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Urgent Milestones</h2>
+              <UrgentMilestones milestones={URGENT_MILESTONES_SAMPLE} />
+            </div>
+            <div className={`${C.contentPanel} ${C.glass}`}>
+              <p className={`${SECTION_LABEL_CLASS} mb-1`}>Tasks &amp; Appointments</p>
+              <h2 className={`${SECTION_TITLE_CLASS} mb-3`}>Pending Items</h2>
+              <PendingTasksPanel actions={executionActions} loading={loading} />
+            </div>
+            <div className="hidden lg:block">
+              <AiAssistantPanel insights={insights} loading={loading} titleId={drawerTitleId} />
             </div>
           </div>
         </div>
-      </main>
       </div>
-    </div>
 
     <button
       type="button"
       onClick={openAi}
       aria-expanded={aiOpen}
       aria-controls={drawerTitleId}
-      className={`fixed bottom-[var(--bottom-nav-height)] left-1/2 z-40 flex -translate-x-1/2 items-center justify-center rounded-full border border-[#00F2FE]/50 bg-[#00F2FE] text-[#080C1A] shadow-[0_0_20px_rgba(0,242,254,0.4)] transition active:scale-95 lg:hidden ${TOUCH_TARGET}`}
+      className={`${C.fabAi} ${TOUCH_TARGET}`}
       aria-label="Open AI assistant"
     >
       <IconGlyph kind="ai" className="h-6 w-6" />

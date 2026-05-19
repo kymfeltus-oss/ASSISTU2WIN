@@ -1,5 +1,4 @@
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
-import Image from "next/image";
+import { BrandLogo } from "@/components/BrandLogo";
 import Link from "next/link";
 
 export const metadata = {
@@ -20,14 +19,7 @@ export default function NotFound() {
       />
 
       <main className="relative z-10 w-full max-w-md text-center">
-        <Image
-          src={BRAND_LOGO_SRC}
-          alt={BRAND_LOGO_ALT}
-          width={160}
-          height={48}
-          className="mx-auto h-auto w-40 object-contain"
-          priority
-        />
+        <BrandLogo variant="not-found" priority showLoadError />
 
         <p className="mt-8 text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase">
           404 · Page not found

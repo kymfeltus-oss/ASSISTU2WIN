@@ -1,32 +1,10 @@
 "use client";
 
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
-import Image from "next/image";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useState } from "react";
 
 type AppBrandProps = {
   readonly variant?: "header" | "auth" | "compact";
-};
-
-const VARIANT_SIZES: Record<
-  NonNullable<AppBrandProps["variant"]>,
-  { readonly width: number; readonly height: number; readonly className: string }
-> = {
-  auth: {
-    width: 240,
-    height: 80,
-    className: "mx-auto h-auto w-[min(240px,88vw)]",
-  },
-  header: {
-    width: 200,
-    height: 67,
-    className: "h-11 w-auto max-w-[200px]",
-  },
-  compact: {
-    width: 160,
-    height: 53,
-    className: "h-9 w-auto max-w-[160px]",
-  },
 };
 
 function BrandTextFallback({
@@ -61,24 +39,30 @@ function BrandTextFallback({
   );
 }
 
+const APP_BRAND_VARIANT = {
+  auth: "hero",
+  header: "header",
+  compact: "compact",
+} as const satisfies Record<
+  NonNullable<AppBrandProps["variant"]>,
+  "hero" | "header" | "compact"
+>;
+
 export function AppBrand({ variant = "header" }: AppBrandProps) {
   const [useFallback, setUseFallback] = useState(false);
-  const size = VARIANT_SIZES[variant];
 
   if (useFallback) {
     return <BrandTextFallback variant={variant} />;
   }
 
   return (
-    <Image
-      src={BRAND_LOGO_SRC}
-      alt={BRAND_LOGO_ALT}
-      width={size.width}
-      height={size.height}
-      priority={variant === "auth"}
-      unoptimized
-      onError={() => setUseFallback(true)}
-      className={`object-contain ${size.className}`}
-    />
+    <div className={variant === "auth" ? "mx-auto w-full" : undefined}>
+      <BrandLogo
+        variant={APP_BRAND_VARIANT[variant]}
+        priority={variant === "auth"}
+        showLoadError={variant === "auth"}
+        onFailed={() => setUseFallback(true)}
+      />
+    </div>
   );
 }

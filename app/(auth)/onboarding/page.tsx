@@ -11,17 +11,21 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
   return (
-    <div className="flex min-h-dvh w-full min-w-0 items-center justify-center app-overflow-x-clip bg-slate-900 px-[var(--app-content-pad-inline)] py-12">
-      <div className="w-full min-w-0 max-w-md space-y-8 rounded-2xl border border-slate-700 bg-slate-800 p-[clamp(1.25rem,4vw,2rem)] shadow-xl">
+    <div className="relative flex min-h-dvh w-full min-w-0 items-center justify-center overflow-hidden bg-[#1E293B] px-[var(--app-content-pad-inline)] py-12 text-[#F8FAFC] app-overflow-x-clip">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.12),transparent_38%),radial-gradient(circle_at_82%_24%,rgba(167,139,250,0.08),transparent_36%),linear-gradient(180deg,#1E293B_0%,#273449_42%,#334155_78%,#475569_100%)]"
+      />
+      <div className="relative z-10 w-full min-w-0 max-w-md space-y-8 rounded-2xl border border-[#00F2FE]/20 bg-[#475569]/42 p-[clamp(1.25rem,4vw,2rem)] shadow-[0_0_80px_rgba(0,242,254,0.12)] backdrop-blur-2xl">
         <div>
           <AppBrand variant="auth" />
-          <span className="mb-3 mt-4 inline-flex items-center rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 font-mono text-xs font-medium text-blue-400">
+          <span className="mb-3 mt-4 inline-flex items-center rounded-md border border-[#00F2FE]/25 bg-[#00F2FE]/10 px-2.5 py-0.5 font-mono text-xs font-medium text-[#00F2FE]">
             Initial Matrix Setup
           </span>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-[#F8FAFC]">
             Configure Your Workspace
           </h2>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[#94A3B8]">
             Please finalize your operational profile to instantiate the custom
             AI telemetry layer.
           </p>
@@ -38,7 +42,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
             <div>
               <label
                 htmlFor="fullName"
-                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+                className="mb-1 block text-xs font-medium tracking-wider text-[#94A3B8] uppercase"
               >
                 Your Full Name
               </label>
@@ -48,14 +52,14 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 type="text"
                 required
                 placeholder="John Doe"
-                className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-sm text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none"
               />
             </div>
 
             <div>
               <label
                 htmlFor="companyName"
-                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+                className="mb-1 block text-xs font-medium tracking-wider text-[#94A3B8] uppercase"
               >
                 Company / Agency Name
               </label>
@@ -65,14 +69,14 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 type="text"
                 required
                 placeholder="Acme Corporation"
-                className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-sm text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none"
               />
             </div>
 
             <div>
               <label
                 htmlFor="roleTitle"
-                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+                className="mb-1 block text-xs font-medium tracking-wider text-[#94A3B8] uppercase"
               >
                 Your Professional Role
               </label>
@@ -82,14 +86,14 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 type="text"
                 required
                 placeholder="e.g., Executive Producer, Senior Analyst"
-                className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-sm text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none"
               />
             </div>
 
             <div>
               <label
                 htmlFor="industry"
-                className="mb-1 block text-xs font-medium tracking-wider text-slate-400 uppercase"
+                className="mb-1 block text-xs font-medium tracking-wider text-[#94A3B8] uppercase"
               >
                 Market Segment / Industry
               </label>
@@ -97,7 +101,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
                 id="industry"
                 name="industry"
                 required
-                className="block w-full cursor-pointer appearance-none rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="block w-full cursor-pointer appearance-none rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-sm text-[#F8FAFC] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none"
               >
                 <option value="" className="text-slate-500">
                   Select industry branch…
@@ -121,7 +125,7 @@ export default async function OnboardingPage({ searchParams }: PageProps) {
 
           <button
             type="submit"
-            className="w-full cursor-pointer justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500"
+            className="w-full cursor-pointer justify-center rounded-lg bg-[#00F2FE] px-4 py-2.5 text-sm font-semibold text-[#0F172A] shadow-[0_0_24px_rgba(0,242,254,0.22)] transition-colors hover:bg-[#67F9FF]"
           >
             Initialize Environment
           </button>

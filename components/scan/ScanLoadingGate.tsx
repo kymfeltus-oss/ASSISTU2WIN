@@ -1,7 +1,6 @@
 "use client";
 
-import { BRAND_LOGO_ALT, BRAND_LOGO_SRC } from "@/lib/branding";
-import Image from "next/image";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -34,15 +33,7 @@ export function ScanLoadingGate({ destination }: ScanLoadingGateProps) {
         aria-live="polite"
         aria-label="AssistU2Win is preparing your experience"
       >
-        <Image
-          src={BRAND_LOGO_SRC}
-          alt={BRAND_LOGO_ALT}
-          width={260}
-          height={87}
-          priority
-          unoptimized
-          className="relative z-10 h-auto w-[min(260px,76vw)] object-contain"
-        />
+        <BrandLogo variant="scan" priority showLoadError />
       </div>
       <p className="relative z-10 mt-8 text-[10px] font-semibold tracking-[0.22em] text-[#00F2FE]/70 uppercase">
         Initializing command

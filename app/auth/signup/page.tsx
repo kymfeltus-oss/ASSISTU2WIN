@@ -19,14 +19,18 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
     typeof rawParams.error === "string" ? decodeURIComponent(rawParams.error) : null;
 
   return (
-    <div className="flex min-h-dvh w-full min-w-0 items-center justify-center app-overflow-x-clip bg-slate-900 px-[var(--app-content-pad-inline)] py-12">
-      <div className="w-full min-w-0 max-w-md space-y-8 rounded-2xl border border-slate-700 bg-slate-800 p-[clamp(1.25rem,4vw,2rem)] shadow-xl">
+    <div className="relative flex min-h-dvh w-full min-w-0 items-center justify-center overflow-hidden bg-[#1E293B] px-[var(--app-content-pad-inline)] py-12 text-[#F8FAFC] app-overflow-x-clip">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.12),transparent_38%),radial-gradient(circle_at_82%_24%,rgba(167,139,250,0.08),transparent_36%),linear-gradient(180deg,#1E293B_0%,#273449_42%,#334155_78%,#475569_100%)]"
+      />
+      <div className="relative z-10 w-full min-w-0 max-w-md space-y-8 rounded-2xl border border-[#00F2FE]/20 bg-[#475569]/42 p-[clamp(1.25rem,4vw,2rem)] shadow-[0_0_80px_rgba(0,242,254,0.12)] backdrop-blur-2xl">
         <div>
           <AppBrand variant="auth" />
-          <h1 className="mt-4 text-center text-lg font-semibold text-white">
+          <h1 className="mt-4 text-center text-lg font-semibold text-[#F8FAFC]">
             {isInvite ? "Create your buyer portal" : "Create an account"}
           </h1>
-          <p className="mt-2 text-center text-sm text-slate-400">
+          <p className="mt-2 text-center text-sm text-[#94A3B8]">
             {isInvite
               ? "Set up My Sanctuary to track your home-buying milestones."
               : "Use a client invite QR from your agent, or sign in on the login page."}
@@ -54,7 +58,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
           <div>
             <label
               htmlFor="fullName"
-              className="mb-1 block text-sm font-medium text-slate-300"
+              className="mb-1 block text-sm font-medium text-[#94A3B8]"
             >
               Lead / Client Name
             </label>
@@ -63,7 +67,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
               name="fullName"
               type="text"
               required
-              className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-400 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none sm:text-sm"
+              className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none sm:text-sm"
               placeholder="John & Mary Smith"
             />
           </div>
@@ -71,7 +75,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
           <div>
             <label
               htmlFor="email-address"
-              className="mb-1 block text-sm font-medium text-slate-300"
+              className="mb-1 block text-sm font-medium text-[#94A3B8]"
             >
               Email address
             </label>
@@ -81,7 +85,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
               type="email"
               autoComplete="email"
               required
-              className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-400 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none sm:text-sm"
+              className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none sm:text-sm"
               placeholder="you@example.com"
             />
           </div>
@@ -89,7 +93,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm font-medium text-slate-300"
+              className="mb-1 block text-sm font-medium text-[#94A3B8]"
             >
               Password
             </label>
@@ -99,7 +103,7 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
               type="password"
               autoComplete="new-password"
               required
-              className="block w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder:text-slate-400 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none sm:text-sm"
+              className="block w-full rounded-lg border border-[#00F2FE]/20 bg-[#1E293B]/55 px-3 py-2 text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#00F2FE] focus:ring-1 focus:ring-[#00F2FE]/40 focus:outline-none sm:text-sm"
               placeholder="••••••••"
             />
           </div>
@@ -107,15 +111,15 @@ export default async function ClientPortalSignupPage({ searchParams }: PageProps
           <button
             type="submit"
             disabled={!isInvite}
-            className="w-full rounded-lg bg-cyan-500 px-3 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-[#00F2FE] px-3 py-2.5 text-sm font-semibold text-[#0F172A] shadow-[0_0_24px_rgba(0,242,254,0.22)] transition hover:bg-[#67F9FF] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isInvite ? "Create portal account" : "Invite link required"}
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-[#94A3B8]">
           Already have an account?{" "}
-          <a href="/login" className="text-cyan-400 hover:text-cyan-300">
+          <a href="/login" className="text-[#00F2FE] hover:text-[#67F9FF]">
             Sign in
           </a>
         </p>

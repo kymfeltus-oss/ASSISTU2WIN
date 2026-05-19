@@ -77,6 +77,9 @@ export async function proxy(request: NextRequest) {
   const isPublicWelcomeNotification =
     request.nextUrl.pathname === "/api/notifications/welcome";
   const isPublicIntakePage = request.nextUrl.pathname.startsWith("/intake");
+  const isPublicIntroPage =
+    request.nextUrl.pathname === "/intro" ||
+    request.nextUrl.pathname === "/intro.html";
   const isPublicScanPage = request.nextUrl.pathname.startsWith("/scan");
   const isPublicDownloadAppPage =
     request.nextUrl.pathname.startsWith("/download-app");
@@ -92,6 +95,7 @@ export async function proxy(request: NextRequest) {
     !isPublicLeadIntake &&
     !isPublicWelcomeNotification &&
     !isPublicIntakePage &&
+    !isPublicIntroPage &&
     !isPublicScanPage &&
     !isPublicDownloadAppPage
   ) {

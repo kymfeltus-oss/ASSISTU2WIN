@@ -19,7 +19,11 @@ export function DashboardAppShell({ children }: DashboardAppShellProps) {
   return (
     <div className={APP_SHELL_BG}>
       <div
-        className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-[#0B1020] via-[#080C1A] to-[#050713]"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(circle at top left, rgba(0,242,254,.10), transparent 32%), radial-gradient(circle at top right, rgba(167,139,250,.08), transparent 28%), linear-gradient(180deg, #020617 0%, #07111d 25%, #0b1524 55%, #0f172a 100%)",
+        }}
         aria-hidden
       />
       <div className={PAGE_CONTAINER}>
